@@ -1,9 +1,14 @@
 (ns com.github.ivarref.initial-test
   (:require [clojure.test :as test :refer [deftest is]]
             [com.github.ivarref.no-double-trouble :as ndt]
-            [datomic.api :as d])
-  (:import (java.util Date)))
+            [com.github.ivarref.log-init :as log-init]
+            [datomic.api :as d]
+            [clojure.edn :as edn]))
 
+(log-init/init-logging!
+  [[#{"datomic.*" "com.datomic.*" "org.apache.*"} :warn]
+   [#{"*"} (edn/read-string
+             (System/getProperty "TAOENSSO_TIMBRE_MIN_LEVEL_EDN" ":info"))]])
 
 (def ^:dynamic *conn* nil)
 
@@ -31,8 +36,16 @@
 
 (test/use-fixtures :each with-new-conn)
 
-(deftest nil-test-with-explicit-tempid
-  (let [temp-id (d/tempid :db.part/user)
-        {:keys [db-after]} @(d/transact *conn* [[:db/cas temp-id :e/version nil 1]
-                                                {:db/id temp-id :e/id "a" :e/info "asdf"}])]
-    (is (= #:e{:version 1} (d/pull db-after [:e/version] [:e/id "a"])))))
+(deftest rewrite-cas-str-test
+  (is (= [[:db/cas "TEMPID" :e/version nil 1]
+          {:db/id "TEMPID", :e/id "a", :e/info "asdf"}
+          [:db/add "TEMPID" :e/asdf "a"]]
+         (ndt/rewrite-cas-str [[:db/cas "a" :e/version nil 1]
+                               {:db/id "a" :e/id "a" :e/info "asdf"}
+                               [:db/add "a" :e/asdf "a"]]
+                              "TEMPID"))))
+
+(deftest nil-test
+  (let [{:keys [db-after]} @(d/transact *conn* (ndt/rewrite-cas-str [[:db/cas "new" :e/version nil 1]
+                                                                     {:db/id "new" :e/id "a" :e/info "asdf"}]))]
+    (is (= #:e{:version 1 :info "asdf"} (d/pull db-after [:e/version :e/info] [:e/id "a"])))))

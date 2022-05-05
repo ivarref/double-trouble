@@ -1,5 +1,6 @@
 (ns com.github.ivarref.no-double-trouble
   (:require [com.github.ivarref.no-double-trouble.impl :as impl]
+            [com.github.ivarref.no-double-trouble.sha :as sha]
             [datomic.api :as d])
   (:import (datomic Connection)))
 
@@ -7,7 +8,7 @@
   [#:db{:ident :com.github.ivarref.no-double-trouble/sha-1, :cardinality :db.cardinality/one, :valueType :db.type/string}])
 
 (defn sha [m]
-  (impl/sha-1 m))
+  (sha/sha-1 m))
 
 (defn root-cause [e]
   (if-let [root (ex-cause e)]
@@ -57,6 +58,24 @@
 ;  (isCancelled [_] (.isCancelled fut))
 ;  (isDone [_] (.isDone fut))
 ;  (cancel [_ interrupt?] (.cancel fut interrupt?))]))
+
+(defn rewrite-cas-str [full-tx & [new-tempid]]
+  (let [[op tempid-str a old-v new-v] (first full-tx)]
+    (if (string? tempid-str)
+      (let [new-tempid (or new-tempid (d/tempid :db.part/user))]
+        (into [[op new-tempid a old-v new-v]]
+              (mapv (fn [x]
+                      (cond (and (map? x) (= tempid-str (get x :db/id)))
+                            (assoc x :db/id new-tempid)
+
+                            (and (vector? x)
+                                 (contains? #{:db/add :db/retract} (first x))
+                                 (= tempid-str (second x)))
+                            (into [(first x) new-tempid] (drop 2 x))
+
+                            :else x))
+                    (rest full-tx))))
+      full-tx)))
 
 (defn transact [conn sha tx]
   (assert (instance? Connection conn) "conn must be an instance of datomic.Connection")
