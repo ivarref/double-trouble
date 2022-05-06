@@ -29,6 +29,15 @@
                                                 {:db/id temp-id :e/id "a" :e/info "a"}])]
     (is (= #:e{:version 1} (d/pull db-after [:e/version] [:e/id "a"])))))
 
+
+(deftest this-should-throw-but-does-not
+  @(d/transact *conn* [{:e/id "a" :e/version 1}])
+  (let [tempid (d/tempid :db.part/user)
+        {:keys [db-after]} @(d/transact *conn* [[:db/cas tempid :e/version nil 2]
+                                                {:db/id tempid :e/id "a" :e/info "a"}])]
+    ; :e/version should not be 2, but it is:
+    (is (= 2 (:e/version (d/pull db-after [:e/version] [:e/id "a"]))))))
+
 (deftest cas-should-resolve-tempid-string
     @(d/transact *conn* [[:db/cas "b" :e/version nil 1]
                          {:db/id "b" :e/id "b" :e/info "b"}]))
