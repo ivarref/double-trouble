@@ -46,14 +46,27 @@
     (root-cause root)
     e))
 
-(defmacro err-msg [body]
+(defmacro err-msg [& body]
   `(try
-     ~@body
+     (do ~@body)
      (log/error "No error message")
      nil
      (catch Exception e#
-       (pp (ex-message (root-cause e#))))))
+       (ex-message (root-cause e#)))))
 
+(deftest test-rejects
+  (is (= "Entity cannot be string" (err-msg @(d/transact *conn* [[:ndt/cas2 "string-not-allowed" :e/version nil 1]]))))
+  (is (= "Entity cannot be tempid/datomic.db.DbId" (err-msg @(d/transact *conn* [[:ndt/cas2 (d/tempid :db.part/user) :e/version nil 1]]))))
+  (is (= "Old-val must be nil for new entities" (err-msg @(d/transact *conn* [[:ndt/cas2 [:e/id "a" :as "tempid"] :e/version 2 1]])))))
 
-(deftest basic
-  (is (= "Entity cannot be string" (err-msg @(d/transact *conn* [[:ndt/cas2 "string-not-allowed" :e/version nil 1]])))))
+(deftest happy-case
+  (let [{:keys [db-after]} @(d/transact *conn* [[:ndt/cas2 [:e/id "a" :as "tempid"] :e/version nil 1]
+                                                {:db/id "tempid" :e/id "a" :e/info "1"}])]
+    (is (= #:e{:id "a" :info "1" :version 1} (d/pull db-after [:e/id :e/info :e/version] [:e/id "a"]))))
+  (let [{:keys [db-after]} @(d/transact *conn* [[:ndt/cas2 [:e/id "a" :as "tempid"] :e/version 1 2]
+                                                {:db/id "tempid" :e/id "a" :e/info "2"}])]
+    (is (= #:e{:id "a" :info "2" :version 2} (d/pull db-after [:e/id :e/info :e/version] [:e/id "a"]))))
+
+  (is (= ":db.error/cas-failed Compare failed: 999 2" (err-msg @(d/transact *conn* [[:ndt/cas2 [:e/id "a" :as "tempid"] :e/version 999 3]
+                                                                                    {:db/id "tempid" :e/id "a" :e/info "2"}])))))
+
