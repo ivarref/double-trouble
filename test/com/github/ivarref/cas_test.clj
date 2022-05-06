@@ -19,6 +19,7 @@
 
 (def test-schema
   [#:db{:ident :e/id, :cardinality :db.cardinality/one, :valueType :db.type/string :unique :db.unique/identity}
+   #:db{:ident :e/id2, :cardinality :db.cardinality/one, :valueType :db.type/string :unique :db.unique/value}
    #:db{:ident :e/sha, :cardinality :db.cardinality/one, :valueType :db.type/string}
    #:db{:ident :e/version, :cardinality :db.cardinality/one, :valueType :db.type/long}
    #:db{:ident :e/version-str, :cardinality :db.cardinality/one, :valueType :db.type/string}
@@ -97,3 +98,16 @@
   (is (= ":db.error/cas-failed Compare failed: 999 2" (err-msg @(d/transact *conn* [[:ndt/cas [:e/id "a" :as "tempid"] :e/version 999 3]
                                                                                     {:db/id "tempid" :e/id "a" :e/info "2"}])))))
 
+
+(deftest datomic-insert-unique-value-behaviour
+  (let [{:keys [db-after]} @(d/transact *conn* [{:db/id "tempid" :e/id2 "a" :e/info "1"}
+                                                [:db/add "tempid" :e/version 1]])]
+    (is (= #:e{:id2 "a", :info "1", :version 1}
+           (d/pull db-after [:e/id2 :e/info :e/version] [:e/id2 "a"])))))
+
+
+(deftest ndt-insert-unique-value-behaviour
+  (is (= [{:db/id "tempid", :e/id2 "a", :e/info "1"}
+          [:db/add "tempid" :e/version 1]]
+         (ndt/expand-tx (d/db *conn*) [{:db/id "tempid", :e/id2 "a", :e/info "1"}
+                                       [:ndt/cas [:e/id2 "a" :as "tempid"] :e/version nil 1]]))))

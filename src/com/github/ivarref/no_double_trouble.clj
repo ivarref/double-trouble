@@ -83,7 +83,8 @@
                           (filter #(= e (:db/id %)))
                           (first))]
           (if-let [new-single (reduce-kv (fn [_ k v]
-                                           (when (cas/is-identity? db k)
+                                           (when (or (cas/is-unique-value? db k)
+                                                     (cas/is-identity? db k))
                                              (reduced [op [k v :as e] a old-v new-v])))
                                          nil
                                          (dissoc ref :db/id))]
@@ -99,19 +100,29 @@
   (mapv (partial resolve-tempid db tx) tx))
 
 
+(defn expand-tx [db full-tx]
+  (let [full-tx (resolve-tempids db full-tx)]
+    (vec (mapcat (fn [tx]
+                  (if (and (vector? tx) (= :ndt/cas (first tx)))
+                    (apply cas/cas (into [db] (drop 1 tx)))
+                    [tx]))
+               full-tx))))
+
 (defn transact [conn sha tx]
   (assert (instance? Connection conn) "conn must be an instance of datomic.Connection")
   (assert (and (string? sha) (= 40 (count sha))) "sha must be a string of length 40")
   (assert (vector? tx) "tx must be a vector")
   (assert (vector? (first tx)) "first entry in tx must be a :db/cas operation")
-  (let [[op e a old-v new-v :as cas-op] (first tx)]
-    (assert (= 5 (count cas-op)) "first entry in tx must be a :db/cas operation")
-    (assert (= op :db/cas) "first entry in tx must be a :db/cas operation")
-    (assert (keyword? a) "first entry in tx must be a :db/cas operation")
-    (assert (some? new-v) "first entry in tx must be a :db/cas operation"))
-
+  (let [tx (resolve-tempids (d/db conn) tx)
+        [op e a old-v new-v :as cas-op] (first tx)]
+    (assert (= 5 (count cas-op)) "first entry in tx must be a :ndt/cas operation")
+    (assert (= op :ndt/cas) "first entry in tx must be a :ndt/cas operation")
+    (assert (keyword? a) "first entry in tx must be a :ndt/cas operation")
+    (assert (some? new-v) "first entry in tx must be a :ndt/cas operation"))
   (if-let [return-early (return-cas-success-value (d/db conn) (first tx) sha)]
-    return-early
+    (do
+      (println "return early..")
+      return-early)
     (let [[_op _e a _v-old v] (first tx)
           full-tx (into [{:db/id                                      "datomic.tx"
                           :com.github.ivarref.no-double-trouble/sha-1 sha}]
