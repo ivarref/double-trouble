@@ -8,8 +8,7 @@
             [com.github.ivarref.stacktrace]
             [com.github.ivarref.debug]
             [com.github.ivarref.no-double-trouble.dbfns.cas :as cas]
-            [clojure.tools.logging :as log]
-            [clojure.string :as str]))
+            [clojure.tools.logging :as log]))
 
 (log-init/init-logging!
   [[#{"datomic.*" "com.datomic.*" "org.apache.*"} :warn]
@@ -109,31 +108,45 @@
   @(d/transact *conn* [[:db/cas [:e/id2 "a"] :e/version 1 2]])
   (is (= #:e{:id2 "a", :info "1", :version 2} (d/pull (d/db *conn*) [:e/id2 :e/info :e/version] [:e/id2 "a"])))
 
-  #_@(d/transact *conn* [{:db/id "tempid" :e/id2 "a" :e/info "1"}
-                         [:db/add "tempid" :e/version 1]]))
+  @(d/transact *conn* [{:db/id [:e/id2 "a"] :e/info "2"}
+                       [:db/cas [:e/id2 "a"] :e/version 2 3]])
 
+  (is (= #:e{:id2 "a", :info "2", :version 3} (d/pull (d/db *conn*) [:e/id2 :e/info :e/version] [:e/id2 "a"]))))
 
+(defn expand [x]
+  (ndt/expand-tx (d/db *conn*) x))
+
+(defn transact [x]
+  @(ndt/transact *conn* (ndt/sha x) x))
+
+(defn pull [e]
+  (dissoc (d/pull (d/db *conn*) [:*] e)
+          :db/id))
+
+(deftest tx-translations
+  (is (= [{:db/id "tempid", :e/id2 "a", :e/info "1"}
+          [:db/add "tempid" :e/version 1]]
+         (expand
+           [{:db/id "tempid", :e/id2 "a", :e/info "1"}
+            [:ndt/cas [:e/id2 "a" :as "tempid"] :e/version nil 1]])
+         (expand
+           [{:db/id "tempid", :e/id2 "a", :e/info "1"}
+            [:ndt/cas "tempid" :e/version nil 1]]))))
 
 (deftest ndt-insert-unique-value-behaviour
-  (is (= [{:db/id "tempid", :e/id2 "a", :e/info "1"}
-          [:db/add "tempid" :e/version 1]]
-         (ndt/expand-tx (d/db *conn*) [{:db/id "tempid", :e/id2 "a", :e/info "1"}
-                                       [:ndt/cas [:e/id2 "a" :as "tempid"] :e/version nil 1]])))
+  (transact [{:db/id "tempid", :e/id2 "a", :e/info "1"}
+             [:ndt/cas "tempid" :e/version nil 1]])
+  (is (= #:e{:id2 "a", :info "1", :version 1} (pull [:e/id2 "a"])))
 
-  (is (= [{:db/id "tempid", :e/id2 "a", :e/info "1"}
-          [:db/add "tempid" :e/version 1]]
-         (ndt/expand-tx (d/db *conn*) [{:db/id "tempid", :e/id2 "a", :e/info "1"}
-                                       [:ndt/cas "tempid" :e/version nil 1]])))
-  (let [{:keys [db-after]} @(ndt/transact *conn*
-                                          (ndt/sha "demo")
-                                          [{:db/id "tempid", :e/id2 "a", :e/info "1"}
-                                           [:ndt/cas "tempid" :e/version nil 1]])]
-    (is (= #:e{:id2 "a", :info "1", :version 1}
-           (d/pull db-after [:e/id2 :e/info :e/version] [:e/id2 "a"]))))
+  #_(transact [{:db/id "tempid", :e/id2 "a", :e/info "1"}
+               [:ndt/cas "tempid" :e/version nil 1]])
 
-  (is (= [[:db/cas [:e/id2 "a"] :e/version 1 2]]
-         (ndt/expand-tx (d/db *conn*)
-                        [[:ndt/cas [:e/id2 "a"] :e/version 1 2]])))
+  #_(let [{:keys [db-after]} @(ndt/transact *conn* (ndt/sha "demo"))]
+      (is (=  (d/pull db-after [:e/id2 :e/info :e/version] [:e/id2 "a"]))))
 
-  @(ndt/transact *conn* (ndt/sha "demo") [[:ndt/cas [:e/id2 "a"] :e/version 1 2]])
-  (is (= #:e{:id2 "a", :info "1", :version 2} (d/pull (d/db *conn*) [:e/id2 :e/info :e/version] [:e/id2 "a"]))))
+  #_(is (= [[:db/cas [:e/id2 "a"] :e/version 1 2]]
+           (ndt/expand-tx (d/db *conn*)
+                          [[:ndt/cas [:e/id2 "a"] :e/version 1 2]])))
+
+  #_@(ndt/transact *conn* (ndt/sha "demo") [[:ndt/cas [:e/id2 "a"] :e/version 1 2]])
+  #_(is (= #:e{:id2 "a", :info "1", :version 2} (d/pull (d/db *conn*) [:e/id2 :e/info :e/version] [:e/id2 "a"]))))

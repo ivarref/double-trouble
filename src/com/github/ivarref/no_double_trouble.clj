@@ -129,23 +129,23 @@
     (assert (keyword? a) ":a must be a keyword")
     (assert (some? new-v) ":v must be some?")
     #_(if-let [return-early (return-cas-success-value (d/db conn) cas-op sha)]
-        (reify
-          IDeref
-          (deref [_]
-            return-early)
-          IBlockingDeref
-          (deref [_ _timeout-ms _timeout-val]
-            return-early)
-          IPending
-          (isRealized [_] true)
-          Future
-          (get [_]
-            return-early)
-          (get [_ _timeout _unit]
-            return-early)
-          (isCancelled [_] false)
-          (isDone [_] true)
-          (cancel [_ _interrupt?] false)))
+        #_(reify
+            IDeref
+            (deref [_]
+              return-early)
+            IBlockingDeref
+            (deref [_ _timeout-ms _timeout-val]
+              return-early)
+            IPending
+            (isRealized [_] true)
+            Future
+            (get [_]
+              return-early)
+            (get [_ _timeout _unit]
+              return-early)
+            (isCancelled [_] false)
+            (isDone [_] true)
+            (cancel [_ _interrupt?] false)))
     (let [full-tx (into [{:db/id                                      "datomic.tx"
                           :com.github.ivarref.no-double-trouble/sha-1 sha}]
                         tx)
