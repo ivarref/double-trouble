@@ -38,6 +38,17 @@
                :cognitect.anomalies/message  "Entity cannot be tempid/datomic.db.DbId"})
 
     (and (vector? e-or-lookup-ref)
+         (= 2 (count e-or-lookup-ref))
+         (is-identity? db (first e-or-lookup-ref)))
+    (cond
+      (some? (:db/id (d/pull db [:db/id] e-or-lookup-ref)))
+      [[:db/cas e-or-lookup-ref a old-val new-val]]
+
+      :else
+      (d/cancel {:cognitect.anomalies/category :cognitect.anomalies/incorrect
+                 :cognitect.anomalies/message  "Could not find entity"}))
+
+    (and (vector? e-or-lookup-ref)
          (= 4 (count e-or-lookup-ref))
          (keyword? (first e-or-lookup-ref))
          (= :as (nth e-or-lookup-ref 2))

@@ -7,6 +7,7 @@
             [com.github.ivarref.dbfns.generate-fn :as gen-fn]
             [com.github.ivarref.stacktrace]
             [com.github.ivarref.debug]
+            [com.github.ivarref.no-double-trouble.dbfns.cas :as cas]
             [clojure.tools.logging :as log]))
 
 (log-init/init-logging!
@@ -72,6 +73,12 @@
 (deftest nil-test
   @(d/transact *conn* [{:e/id "a" :e/info "1"}])
   @(d/transact *conn* [[:db/cas [:e/id "a"] :e/version nil 1]]))
+
+
+(deftest ndt-nil-test
+  @(d/transact *conn* [{:e/id "a" :e/info "1"}])
+  (is (= [[:db/cas [:e/id "a"] :e/version nil 1]]
+         (cas/cas (d/db *conn*) [:e/id "a"] :e/version nil 1))))
 
 
 (deftest nil-test-2
