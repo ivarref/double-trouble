@@ -1,7 +1,7 @@
 (ns com.github.ivarref.no-double-trouble
   (:require [com.github.ivarref.no-double-trouble.impl :as impl]
             [com.github.ivarref.no-double-trouble.sha :as sha]
-            [com.github.ivarref.no-double-trouble.dbfns.cas :as cas2]
+            [com.github.ivarref.no-double-trouble.dbfns.cas :as cas]
             [datomic.api :as d])
   (:import (datomic Connection)))
 
@@ -64,7 +64,7 @@
   (cond
     (and (vector? single)
          (>= (count single) 1)
-         (= :ndt/cas2 (first single))
+         (= :ndt/cas (first single))
          (not= 5 (count single)))
     (throw (ex-info ":ndt/cas requires exactly 5 arguments" {:tx single}))
 
@@ -79,7 +79,7 @@
                           (filter #(= e (:db/id %)))
                           (first))]
           (if-let [new-single (reduce-kv (fn [_ k v]
-                                           (when (cas2/is-identity? db k)
+                                           (when (cas/is-identity? db k)
                                              (reduced [op [k v :as e] a old-v new-v])))
                                          nil
                                          (dissoc ref :db/id))]
