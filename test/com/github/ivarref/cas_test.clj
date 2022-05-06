@@ -160,4 +160,7 @@
                                       [:ndt/cas [:e/id "a"] :e/version 1 2]]))))
 
   (is (false? (:transacted? (transact [{:e/id "a" :e/info "2"}
-                                       [:ndt/cas [:e/id "a"] :e/version 1 2]])))))
+                                       [:ndt/cas [:e/id "a"] :e/version 1 2]]))))
+
+  (is (= 2 (:v (transact [{:e/id "a" :e/info "2"}
+                          [:ndt/cas [:e/id "a"] :e/version 1 2]])))))
