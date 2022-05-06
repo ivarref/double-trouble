@@ -1,4 +1,4 @@
-(ns com.github.ivarref.no-double-trouble.dbfns.cas2
+(ns com.github.ivarref.no-double-trouble.dbfns.cas
   (:require [clojure.walk :as walk]
             [datomic.api :as d])
   (:import (java.util HashSet List)
@@ -61,7 +61,7 @@
 
 
 
-(defn cas2 [db e-or-lookup-ref attr old-val new-val]
+(defn cas [db e-or-lookup-ref attr old-val new-val]
   (cas-inner
     db
     (to-clojure-types e-or-lookup-ref)
