@@ -60,24 +60,6 @@
 ;  (isDone [_] (.isDone fut))
 ;  (cancel [_ interrupt?] (.cancel fut interrupt?))]))
 
-(defn rewrite-cas-str [full-tx & [new-tempid]]
-  (let [[op tempid-str a old-v new-v] (first full-tx)]
-    (if (string? tempid-str)
-      (let [new-tempid (or new-tempid (d/tempid :db.part/user))]
-        (into [[op new-tempid a old-v new-v]]
-              (mapv (fn [x]
-                      (cond (and (map? x) (= tempid-str (get x :db/id)))
-                            (assoc x :db/id new-tempid)
-
-                            (and (vector? x)
-                                 (contains? #{:db/add :db/retract} (first x))
-                                 (= tempid-str (second x)))
-                            (into [(first x) new-tempid] (drop 2 x))
-
-                            :else x))
-                    (rest full-tx))))
-      full-tx)))
-
 (defn resolve-tempid [db full-tx single]
   (cond
     (and (vector? single)

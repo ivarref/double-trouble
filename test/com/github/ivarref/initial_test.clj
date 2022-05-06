@@ -3,9 +3,7 @@
             [com.github.ivarref.no-double-trouble :as ndt]
             [com.github.ivarref.log-init :as log-init]
             [datomic.api :as d]
-            [clojure.edn :as edn]
-            [clojure.java.io :as io]
-            [clojure.string :as str]))
+            [clojure.edn :as edn]))
 
 (log-init/init-logging!
   [[#{"datomic.*" "com.datomic.*" "org.apache.*"} :warn]
@@ -38,14 +36,6 @@
 
 (test/use-fixtures :each with-new-conn)
 
-(deftest rewrite-cas-str-test
-  (is (= [[:db/cas "TEMPID" :e/version nil 1]
-          {:db/id "TEMPID", :e/id "a", :e/info "asdf"}
-          [:db/add "TEMPID" :e/asdf "a"]]
-         (ndt/rewrite-cas-str [[:db/cas "a" :e/version nil 1]
-                               {:db/id "a" :e/id "a" :e/info "asdf"}
-                               [:db/add "a" :e/asdf "a"]]
-                              "TEMPID"))))
 
 (comment)
 [[:db/add "ent" :e/version 1]
