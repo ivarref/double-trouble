@@ -1,6 +1,4 @@
-(ns com.github.ivarref.test-utils)
-
-(ns com.github.ivarref.yoltq.log-init
+(ns com.github.ivarref.test-utils
   (:require [clojure.term.colors :as colors]
             [taoensso.timbre :as timbre]
             [clojure.string :as str]))
