@@ -1,6 +1,7 @@
 (ns com.github.ivarref.no-double-trouble
   (:require [com.github.ivarref.no-double-trouble.impl :as impl]
             [com.github.ivarref.no-double-trouble.sha :as sha]
+            [com.github.ivarref.no-double-trouble.dbfns.cas2 :as cas2]
             [datomic.api :as d])
   (:import (datomic Connection)))
 
@@ -76,6 +77,41 @@
                             :else x))
                     (rest full-tx))))
       full-tx)))
+
+(defn resolve-tempid [db full-tx single]
+  (cond
+    (and (vector? single)
+         (>= (count single) 1)
+         (= :ndt/cas2 (first single))
+         (not= 5 (count single)))
+    (throw (ex-info ":ndt/cas requires exactly 5 arguments" {:tx single}))
+
+    (and (vector? single)
+         (>= (count single) 1)
+         (= :ndt/cas (first single))
+         (= 5 (count single)))
+    (let [[op e a old-v new-v] single]
+      (if (string? e)
+        (if-let [ref (->> full-tx
+                          (filter map?)
+                          (filter #(= e (:db/id %)))
+                          (first))]
+          (if-let [new-single (reduce-kv (fn [_ k v]
+                                           (when (cas2/is-identity? db k)
+                                             (reduced [op [k v :as e] a old-v new-v])))
+                                         nil
+                                         (dissoc ref :db/id))]
+            new-single
+            (throw (ex-info (str "Could not resolve tempid") {:tempid e})))
+          (throw (ex-info (str "Could not resolve tempid") {:tempid e})))
+
+        single))
+    :else
+    single))
+
+(defn resolve-tempids [db tx]
+  (mapv (partial resolve-tempid db tx) tx))
+
 
 (defn transact [conn sha tx]
   (assert (instance? Connection conn) "conn must be an instance of datomic.Connection")

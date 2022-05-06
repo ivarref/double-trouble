@@ -17,6 +17,16 @@
             :else e))
     m))
 
+(defn is-identity? [db attr]
+  (= :db.unique/identity
+     (d/q '[:find ?ident .
+            :in $ ?e
+            :where
+            [?e :db/unique ?typ]
+            [?typ :db/ident ?ident]]
+          db
+          attr)))
+
 (defn cas-inner [db e-or-lookup-ref a old-val new-val]
   (cond
     (string? e-or-lookup-ref)
@@ -32,14 +42,7 @@
          (keyword? (first e-or-lookup-ref))
          (= :as (nth e-or-lookup-ref 2))
          (string? (last e-or-lookup-ref))
-         (= :db.unique/identity
-            (d/q '[:find ?ident .
-                   :in $ ?e
-                   :where
-                   [?e :db/unique ?typ]
-                   [?typ :db/ident ?ident]]
-                 db
-                 (first e-or-lookup-ref))))
+         (is-identity? db (first e-or-lookup-ref)))
     (let [e (vec (take 2 e-or-lookup-ref))]
       (cond
         (some? (:db/id (d/pull db [:db/id] e)))
