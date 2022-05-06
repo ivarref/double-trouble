@@ -69,6 +69,16 @@
          (ndt/resolve-tempids (d/db *conn*) [[:ndt/cas "tempid" :e/version nil 1]
                                              {:db/id "tempid" :e/id "a" :e/info "1"}]))))
 
+(deftest nil-test
+  @(d/transact *conn* [{:e/id "a" :e/info "1"}])
+  @(d/transact *conn* [[:db/cas [:e/id "a"] :e/version nil 1]]))
+
+
+(deftest nil-test-2
+  @(d/transact *conn* [{:e/id "a" :e/info "1"}])
+  (is (= ":db.error/cas-failed Compare failed: 2 " (err-msg @(d/transact *conn* [[:db/cas [:e/id "a"] :e/version 2 1]])))))
+
+
 (deftest happy-case
   (let [{:keys [db-after]} @(d/transact *conn* [[:ndt/cas [:e/id "a" :as "tempid"] :e/version nil 1]
                                                 {:db/id "tempid" :e/id "a" :e/info "1"}])]
