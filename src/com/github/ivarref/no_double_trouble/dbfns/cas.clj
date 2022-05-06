@@ -49,7 +49,8 @@
 
     (and (vector? e-or-lookup-ref)
          (= 2 (count e-or-lookup-ref))
-         (is-identity? db (first e-or-lookup-ref)))
+         (or (is-identity? db (first e-or-lookup-ref))
+             (is-unique-value? db (first e-or-lookup-ref))))
     (cond
       (some? (:db/id (d/pull db [:db/id] e-or-lookup-ref)))
       [[:db/cas e-or-lookup-ref a old-val new-val]]

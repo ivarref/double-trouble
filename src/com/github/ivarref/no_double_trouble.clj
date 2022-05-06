@@ -4,7 +4,9 @@
             [com.github.ivarref.no-double-trouble.dbfns.cas :as cas]
             [com.github.ivarref.no-double-trouble.generated :as gen]
             [datomic.api :as d])
-  (:import (datomic Connection)))
+  (:import (datomic Connection)
+           (clojure.lang IDeref IBlockingDeref IPending)
+           (java.util.concurrent Future TimeUnit TimeoutException)))
 
 (def schema
   (into
@@ -47,23 +49,6 @@
          :db-after    (d/as-of db tx)
          :db-before   (d/as-of db (dec tx))}))))
 
-
-;(reify
-;  clojure.lang.IDeref
-;  (deref [_] (deref-future fut))
-;  clojure.lang.IBlockingDeref
-;  (deref
-; [_ timeout-ms timeout-val
-;    (deref-future fut timeout-ms timeout-val)
-;  clojure.lang.IPending
-;  (isRealized [_] (.isDone fut))
-;  java.util.concurrent.Future
-;  (get [_] (.get fut))
-;  (get [_ timeout unit] (.get fut timeout unit))
-;  (isCancelled [_] (.isCancelled fut))
-;  (isDone [_] (.isDone fut))
-;  (cancel [_ interrupt?] (.cancel fut interrupt?))]))
-
 (defn resolve-tempid [db full-tx single]
   (cond
     (and (vector? single)
@@ -103,10 +88,29 @@
 (defn expand-tx [db full-tx]
   (let [full-tx (resolve-tempids db full-tx)]
     (vec (mapcat (fn [tx]
-                  (if (and (vector? tx) (= :ndt/cas (first tx)))
-                    (apply cas/cas (into [db] (drop 1 tx)))
-                    [tx]))
-               full-tx))))
+                   (if (and (vector? tx) (= :ndt/cas (first tx)))
+                     (apply cas/cas (into [db] (drop 1 tx)))
+                     [tx]))
+                 full-tx))))
+
+; Borrowed from clojure.core
+(defn ^:private deref-future
+  ([^Future fut]
+   (.get fut))
+  ([^Future fut timeout-ms timeout-val]
+   (try (.get fut timeout-ms TimeUnit/MILLISECONDS)
+        (catch TimeoutException _
+          timeout-val))))
+
+(defmacro handle-cas [conn a new-v cas-op sha get-res]
+  `(try
+     (let [res# ~get-res]
+       (assoc res# :v ~new-v :transacted? true))
+     (catch Exception exception#
+       (if (not (cas-failure-for-attr exception# ~a))
+         (throw exception#)
+         (or (return-cas-success-value (d/db ~conn) ~cas-op ~sha)
+             (throw exception#))))))
 
 (defn transact [conn sha tx]
   (assert (instance? Connection conn) "conn must be an instance of datomic.Connection")
@@ -121,22 +125,46 @@
         _ (when (nil? cas-op)
             (throw (ex-info "Transaction must contain :ndt/cas operation" {:tx tx :sha sha})))
         [op e a old-v new-v] cas-op]
-    (assert (= 5 (count cas-op)) "first entry in tx must be a :ndt/cas operation")
-    (assert (= op :ndt/cas) "first entry in tx must be a :ndt/cas operation")
-    (assert (keyword? a) "first entry in tx must be a :ndt/cas operation")
-    (assert (some? new-v) "first entry in tx must be a :ndt/cas operation")
-    (if-let [return-early (return-cas-success-value (d/db conn) cas-op sha)]
-      (do
-        (println "returning early..")
-        return-early)
-      (let [full-tx (into [{:db/id                                      "datomic.tx"
-                            :com.github.ivarref.no-double-trouble/sha-1 sha}]
-                          tx)]
-        (try
-          (let [res @(d/transact conn full-tx)]
-            (assoc res :v new-v :transacted? true))
-          (catch Exception exception
-            (if (not (cas-failure-for-attr exception a))
-              (throw exception)
-              (or (return-cas-success-value (d/db conn) cas-op sha)
-                  (throw exception)))))))))
+    (assert (= 5 (count cas-op)) "tx must be a :ndt/cas operation")
+    (assert (keyword? a) ":a must be a keyword")
+    (assert (some? new-v) ":v must be some?")
+    #_(if-let [return-early (return-cas-success-value (d/db conn) cas-op sha)]
+        (reify
+          IDeref
+          (deref [_]
+            return-early)
+          IBlockingDeref
+          (deref [_ _timeout-ms _timeout-val]
+            return-early)
+          IPending
+          (isRealized [_] true)
+          Future
+          (get [_]
+            return-early)
+          (get [_ _timeout _unit]
+            return-early)
+          (isCancelled [_] false)
+          (isDone [_] true)
+          (cancel [_ _interrupt?] false)))
+    (let [full-tx (into [{:db/id                                      "datomic.tx"
+                          :com.github.ivarref.no-double-trouble/sha-1 sha}]
+                        tx)
+          fut (d/transact conn full-tx)]
+      (reify
+        IDeref
+        (deref [_]
+          (handle-cas conn a new-v cas-op sha (deref-future fut)))
+        IBlockingDeref
+        (deref [_ timeout-ms timeout-val]
+          (handle-cas conn a new-v cas-op sha (deref-future fut timeout-ms timeout-val)))
+        IPending
+        (isRealized [_] (.isDone fut))
+        Future
+        (get [_]
+          (handle-cas conn a new-v cas-op sha (.get fut)))
+        (get [_ timeout unit]
+          (handle-cas conn a new-v cas-op sha (.get fut timeout unit)))
+        (isCancelled [_] (.isCancelled fut))
+        (isDone [_] (.isDone fut))
+        (cancel [_ interrupt?] (.cancel fut interrupt?))))))
+

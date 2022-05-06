@@ -107,21 +107,33 @@
            (d/pull db-after [:e/id2 :e/info :e/version] [:e/id2 "a"]))))
 
   @(d/transact *conn* [[:db/cas [:e/id2 "a"] :e/version 1 2]])
-  (is (= #:e{:id2 "a", :info "1", :version 2} (d/pull (d/db *conn*) [:e/id2 :e/info :e/version] [:e/id2 "a"]))))
+  (is (= #:e{:id2 "a", :info "1", :version 2} (d/pull (d/db *conn*) [:e/id2 :e/info :e/version] [:e/id2 "a"])))
+
+  #_@(d/transact *conn* [{:db/id "tempid" :e/id2 "a" :e/info "1"}
+                         [:db/add "tempid" :e/version 1]]))
 
 
 
 (deftest ndt-insert-unique-value-behaviour
-  #_(is (= [{:db/id "tempid", :e/id2 "a", :e/info "1"}
-            [:db/add "tempid" :e/version 1]]
-           (ndt/expand-tx (d/db *conn*) [{:db/id "tempid", :e/id2 "a", :e/info "1"}
-                                         [:ndt/cas [:e/id2 "a" :as "tempid"] :e/version nil 1]])))
+  (is (= [{:db/id "tempid", :e/id2 "a", :e/info "1"}
+          [:db/add "tempid" :e/version 1]]
+         (ndt/expand-tx (d/db *conn*) [{:db/id "tempid", :e/id2 "a", :e/info "1"}
+                                       [:ndt/cas [:e/id2 "a" :as "tempid"] :e/version nil 1]])))
 
-  #_(is (= [{:db/id "tempid", :e/id2 "a", :e/info "1"}
-            [:db/add "tempid" :e/version 1]]
-           (ndt/expand-tx (d/db *conn*) [{:db/id "tempid", :e/id2 "a", :e/info "1"}
-                                         [:ndt/cas "tempid" :e/version nil 1]])))
-  (ndt/transact *conn*
-                (ndt/sha "demo")
-                [{:db/id "tempid", :e/id2 "a", :e/info "1"}
-                 [:ndt/cas "tempid" :e/version nil 1]]))
+  (is (= [{:db/id "tempid", :e/id2 "a", :e/info "1"}
+          [:db/add "tempid" :e/version 1]]
+         (ndt/expand-tx (d/db *conn*) [{:db/id "tempid", :e/id2 "a", :e/info "1"}
+                                       [:ndt/cas "tempid" :e/version nil 1]])))
+  (let [{:keys [db-after]} @(ndt/transact *conn*
+                                          (ndt/sha "demo")
+                                          [{:db/id "tempid", :e/id2 "a", :e/info "1"}
+                                           [:ndt/cas "tempid" :e/version nil 1]])]
+    (is (= #:e{:id2 "a", :info "1", :version 1}
+           (d/pull db-after [:e/id2 :e/info :e/version] [:e/id2 "a"]))))
+
+  (is (= [[:db/cas [:e/id2 "a"] :e/version 1 2]]
+         (ndt/expand-tx (d/db *conn*)
+                        [[:ndt/cas [:e/id2 "a"] :e/version 1 2]])))
+
+  @(ndt/transact *conn* (ndt/sha "demo") [[:ndt/cas [:e/id2 "a"] :e/version 1 2]])
+  (is (= #:e{:id2 "a", :info "1", :version 2} (d/pull (d/db *conn*) [:e/id2 :e/info :e/version] [:e/id2 "a"]))))
