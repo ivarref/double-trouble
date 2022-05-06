@@ -2,11 +2,15 @@
   (:require [com.github.ivarref.no-double-trouble.impl :as impl]
             [com.github.ivarref.no-double-trouble.sha :as sha]
             [com.github.ivarref.no-double-trouble.dbfns.cas :as cas]
+            [com.github.ivarref.no-double-trouble.generated :as gen]
             [datomic.api :as d])
   (:import (datomic Connection)))
 
 (def schema
-  [#:db{:ident :com.github.ivarref.no-double-trouble/sha-1, :cardinality :db.cardinality/one, :valueType :db.type/string}])
+  (into
+    [#:db{:ident :com.github.ivarref.no-double-trouble/sha-1, :cardinality :db.cardinality/one, :valueType :db.type/string}]
+    gen/fns))
+
 
 (defn sha [m]
   (sha/sha-1 m))

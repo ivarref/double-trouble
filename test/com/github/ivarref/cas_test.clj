@@ -1,4 +1,4 @@
-(ns com.github.ivarref.cas2-test
+(ns com.github.ivarref.cas-test
   (:require [clojure.test :refer [deftest is use-fixtures]]
             [clojure.edn :as edn]
             [com.github.ivarref.log-init :as log-init]
