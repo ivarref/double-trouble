@@ -112,26 +112,31 @@
   (assert (instance? Connection conn) "conn must be an instance of datomic.Connection")
   (assert (and (string? sha) (= 40 (count sha))) "sha must be a string of length 40")
   (assert (vector? tx) "tx must be a vector")
-  (assert (vector? (first tx)) "first entry in tx must be a :db/cas operation")
   (let [tx (resolve-tempids (d/db conn) tx)
-        [op e a old-v new-v :as cas-op] (first tx)]
+        cas-op (->> tx
+                    (filter vector?)
+                    (filter not-empty)
+                    (filter #(= :ndt/cas (first %)))
+                    (first))
+        _ (when (nil? cas-op)
+            (throw (ex-info "Transaction must contain :ndt/cas operation" {:tx tx :sha sha})))
+        [op e a old-v new-v] cas-op]
     (assert (= 5 (count cas-op)) "first entry in tx must be a :ndt/cas operation")
     (assert (= op :ndt/cas) "first entry in tx must be a :ndt/cas operation")
     (assert (keyword? a) "first entry in tx must be a :ndt/cas operation")
-    (assert (some? new-v) "first entry in tx must be a :ndt/cas operation"))
-  (if-let [return-early (return-cas-success-value (d/db conn) (first tx) sha)]
-    (do
-      (println "return early..")
-      return-early)
-    (let [[_op _e a _v-old v] (first tx)
-          full-tx (into [{:db/id                                      "datomic.tx"
-                          :com.github.ivarref.no-double-trouble/sha-1 sha}]
-                        tx)]
-      (try
-        (let [res @(d/transact conn full-tx)]
-          (assoc res :v v :transacted? true))
-        (catch Exception exception
-          (if (not (cas-failure-for-attr exception a))
-            (throw exception)
-            (or (return-cas-success-value (d/db conn) (first tx) sha)
-                (throw exception))))))))
+    (assert (some? new-v) "first entry in tx must be a :ndt/cas operation")
+    (if-let [return-early (return-cas-success-value (d/db conn) cas-op sha)]
+      (do
+        (println "returning early..")
+        return-early)
+      (let [full-tx (into [{:db/id                                      "datomic.tx"
+                            :com.github.ivarref.no-double-trouble/sha-1 sha}]
+                          tx)]
+        (try
+          (let [res @(d/transact conn full-tx)]
+            (assoc res :v new-v :transacted? true))
+          (catch Exception exception
+            (if (not (cas-failure-for-attr exception a))
+              (throw exception)
+              (or (return-cas-success-value (d/db conn) cas-op sha)
+                  (throw exception)))))))))
