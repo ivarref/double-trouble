@@ -56,6 +56,16 @@
      (catch Exception e#
        (ex-message (root-cause e#)))))
 
+(defn expand [x]
+  (ndt/expand-tx (d/db *conn*) x))
+
+(defn transact [x]
+  @(ndt/transact *conn* (ndt/sha x) x))
+
+(defn pull [e]
+  (dissoc (d/pull (d/db *conn*) [:*] e) :db/id))
+
+
 (deftest test-rejects
   (is (= "Entity cannot be string" (err-msg @(d/transact *conn* [[:ndt/cas "string-not-allowed" :e/version nil 1]]))))
   (is (= "Entity cannot be tempid/datomic.db.DbId" (err-msg @(d/transact *conn* [[:ndt/cas (d/tempid :db.part/user) :e/version nil 1]]))))
@@ -113,16 +123,6 @@
 
   (is (= #:e{:id2 "a", :info "2", :version 3} (d/pull (d/db *conn*) [:e/id2 :e/info :e/version] [:e/id2 "a"]))))
 
-(defn expand [x]
-  (ndt/expand-tx (d/db *conn*) x))
-
-(defn transact [x]
-  @(ndt/transact *conn* (ndt/sha x) x))
-
-(defn pull [e]
-  (dissoc (d/pull (d/db *conn*) [:*] e)
-          :db/id))
-
 (deftest tx-translations
   (is (= [{:db/id "tempid", :e/id2 "a", :e/info "1"}
           [:db/add "tempid" :e/version 1]]
@@ -138,15 +138,13 @@
              [:ndt/cas "tempid" :e/version nil 1]])
   (is (= #:e{:id2 "a", :info "1", :version 1} (pull [:e/id2 "a"])))
 
-  #_(transact [{:db/id "tempid", :e/id2 "a", :e/info "1"}
-               [:ndt/cas "tempid" :e/version nil 1]])
+  (is (= "Cannot use tempid for existing :db.unique/value entities"
+         (err-msg (transact [{:db/id "tempid", :e/id2 "a", :e/info "1"}
+                             [:ndt/cas "tempid" :e/version nil 1]]))))
 
-  #_(let [{:keys [db-after]} @(ndt/transact *conn* (ndt/sha "demo"))]
-      (is (=  (d/pull db-after [:e/id2 :e/info :e/version] [:e/id2 "a"]))))
+  (transact [[:ndt/cas [:e/id2 "a"] :e/version 1 2]])
+  (is (= #:e{:id2 "a", :info "1", :version 2} (pull [:e/id2 "a"])))
 
-  #_(is (= [[:db/cas [:e/id2 "a"] :e/version 1 2]]
-           (ndt/expand-tx (d/db *conn*)
-                          [[:ndt/cas [:e/id2 "a"] :e/version 1 2]])))
-
-  #_@(ndt/transact *conn* (ndt/sha "demo") [[:ndt/cas [:e/id2 "a"] :e/version 1 2]])
-  #_(is (= #:e{:id2 "a", :info "1", :version 2} (d/pull (d/db *conn*) [:e/id2 :e/info :e/version] [:e/id2 "a"]))))
+  (transact [{:db/id [:e/id2 "a"] :e/info "2"}
+             [:ndt/cas [:e/id2 "a"] :e/version 2 3]])
+  (is (= #:e{:id2 "a", :info "2", :version 3} (pull [:e/id2 "a"]))))

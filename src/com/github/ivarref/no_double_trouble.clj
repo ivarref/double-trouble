@@ -70,6 +70,9 @@
           (if-let [new-single (reduce-kv (fn [_ k v]
                                            (when (or (cas/is-unique-value? db k)
                                                      (cas/is-identity? db k))
+                                             (when (and (cas/is-unique-value? db k)
+                                                        (some? (:db/id (d/pull db [:db/id] [k v]))))
+                                               (throw (ex-info "Cannot use tempid for existing :db.unique/value entities" {})))
                                              (reduced [op [k v :as e] a old-v new-v])))
                                          nil
                                          (dissoc ref :db/id))]
