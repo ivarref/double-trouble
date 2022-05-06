@@ -148,3 +148,16 @@
   (transact [{:db/id [:e/id2 "a"] :e/info "2"}
              [:ndt/cas [:e/id2 "a"] :e/version 2 3]])
   (is (= #:e{:id2 "a", :info "2", :version 3} (pull [:e/id2 "a"]))))
+
+(deftest transacted?
+  (is (true? (:transacted? (transact [{:db/id "tempid", :e/id "a", :e/info "1"}
+                                      [:ndt/cas "tempid" :e/version nil 1]]))))
+
+  (is (false? (:transacted? (transact [{:db/id "tempid", :e/id "a", :e/info "1"}
+                                       [:ndt/cas "tempid" :e/version nil 1]]))))
+
+  (is (true? (:transacted? (transact [{:e/id "a" :e/info "2"}
+                                      [:ndt/cas [:e/id "a"] :e/version 1 2]]))))
+
+  (is (false? (:transacted? (transact [{:e/id "a" :e/info "2"}
+                                       [:ndt/cas [:e/id "a"] :e/version 1 2]])))))

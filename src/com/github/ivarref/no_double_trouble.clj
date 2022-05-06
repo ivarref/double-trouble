@@ -1,6 +1,5 @@
 (ns com.github.ivarref.no-double-trouble
-  (:require [com.github.ivarref.no-double-trouble.impl :as impl]
-            [com.github.ivarref.no-double-trouble.sha :as sha]
+  (:require [com.github.ivarref.no-double-trouble.sha :as sha]
             [com.github.ivarref.no-double-trouble.dbfns.cas :as cas]
             [com.github.ivarref.no-double-trouble.generated :as gen]
             [datomic.api :as d])
@@ -31,8 +30,11 @@
 
 
 (defn return-cas-success-value [db cas-lock sha]
-  (let [[_op e a v-old _v] cas-lock]
-    (when (some? v-old)
+  (let [[_op e a v-old v-new] cas-lock
+        e (if (vector? e)
+            (vec (take 2 e))
+            e)]
+    (if (some? v-old)
       (when-let [[v tx] (d/q '[:find [?v ?tx]
                                :in $ ?e ?a ?v-old ?sha
                                :where
@@ -43,6 +45,19 @@
                              e
                              a
                              v-old
+                             sha)]
+        {:v           v
+         :transacted? false
+         :db-after    (d/as-of db tx)
+         :db-before   (d/as-of db (dec tx))})
+      (when-let [[v tx] (d/q '[:find [?v ?tx]
+                               :in $ ?e ?a ?sha
+                               :where
+                               [?e ?a ?v ?tx true]
+                               [?tx :com.github.ivarref.no-double-trouble/sha-1 ?sha ?tx true]]
+                             (d/history db)
+                             e
+                             a
                              sha)]
         {:v           v
          :transacted? false
