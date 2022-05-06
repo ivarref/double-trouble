@@ -91,29 +91,3 @@
                          {:db/id tempid :e/id "a" :e/info "a"}])))
 
 
-(deftest whatever
-  (let [id (d/tempid :db.part/user)]
-    (def id-1 (d/entity (d/db *conn*) id))
-    (def id-2 (d/entid (d/db *conn*) id))))
-
-(defn dump-version [pom-props]
-  (some->> (io/resource "d.datomic-pro/pom.xml")
-           (slurp)
-           (str/split-lines)
-           (filter #(str/includes? % "<version"))
-           (first)
-           (seq)
-           (drop (count "version="))
-           (str/join "")))
-
-(comment
-  (some->> (io/resource "META-INF/maven/com.datomic/datomic-pro/pom.xml")
-           (slurp)
-           (str/split-lines)
-           (filter #(str/includes? % "<version>"))
-           (first)))
-
-#_(deftest nil-test
-    (let [{:keys [db-after]} @(d/transact *conn* (ndt/rewrite-cas-str [[:db/cas "new" :e/version nil 1]
-                                                                       {:db/id "new" :e/id "a" :e/info "asdf"}]))]
-      (is (= #:e{:version 1 :info "asdf"} (d/pull db-after [:e/version :e/info] [:e/id "a"])))))
