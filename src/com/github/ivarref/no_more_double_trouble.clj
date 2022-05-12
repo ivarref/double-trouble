@@ -9,7 +9,7 @@
 
 (def schema
   (into
-    [#:db{:ident :com.github.ivarref.no-double-trouble/sha-1, :cardinality :db.cardinality/one, :valueType :db.type/string}]
+    [#:db{:ident :com.github.ivarref.no-more-double-trouble/sha-1, :cardinality :db.cardinality/one, :valueType :db.type/string}]
     gen/fns))
 
 
@@ -39,7 +39,7 @@
                                :in $ ?e ?a ?v-old ?sha
                                :where
                                [?e ?a ?v-old ?tx false]
-                               [?tx :com.github.ivarref.no-double-trouble/sha-1 ?sha ?tx true]
+                               [?tx :com.github.ivarref.no-more-double-trouble/sha-1 ?sha ?tx true]
                                [?e ?a ?v ?tx true]]
                              (d/history db)
                              e
@@ -54,7 +54,7 @@
                                :in $ ?e ?a ?sha
                                :where
                                [?e ?a ?v ?tx true]
-                               [?tx :com.github.ivarref.no-double-trouble/sha-1 ?sha ?tx true]]
+                               [?tx :com.github.ivarref.no-more-double-trouble/sha-1 ?sha ?tx true]]
                              (d/history db)
                              e
                              a
@@ -166,7 +166,7 @@
             (isDone [_] true)
             (cancel [_ _interrupt?] false)))
     (let [full-tx (into [{:db/id                                      "datomic.tx"
-                          :com.github.ivarref.no-double-trouble/sha-1 sha}]
+                          :com.github.ivarref.no-more-double-trouble/sha-1 sha}]
                         tx)
           fut (d/transact conn full-tx)]
       (reify
