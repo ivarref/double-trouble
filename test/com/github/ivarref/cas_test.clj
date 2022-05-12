@@ -35,7 +35,7 @@
     (try
       @(d/transact conn ndt/schema)
       @(d/transact conn test-schema)
-      @(d/transact conn [(gen-fn/generate-function 'com.github.ivarref.no-double-trouble.dbfns.cas/cas :ndt/cas false)])
+      @(d/transact conn [(gen-fn/generate-function 'com.github.ivarref.no-more-double-trouble.dbfns.cas/cas :ndt/cas false)])
       (binding [*conn* conn]
         (f))
       (finally
