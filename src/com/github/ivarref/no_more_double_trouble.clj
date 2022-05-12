@@ -69,13 +69,13 @@
   (cond
     (and (vector? single)
          (>= (count single) 1)
-         (= :ndt/cas (first single))
+         (= :nmdt/cas (first single))
          (not= 5 (count single)))
-    (throw (ex-info ":ndt/cas requires exactly 5 arguments" {:tx single}))
+    (throw (ex-info ":nmdt/cas requires exactly 5 arguments" {:tx single}))
 
     (and (vector? single)
          (>= (count single) 1)
-         (= :ndt/cas (first single))
+         (= :nmdt/cas (first single))
          (= 5 (count single)))
     (let [[op e a old-v new-v] single]
       (if (string? e)
@@ -107,7 +107,7 @@
 (defn expand-tx [db full-tx]
   (let [full-tx (resolve-tempids db full-tx)]
     (vec (mapcat (fn [tx]
-                   (if (and (vector? tx) (= :ndt/cas (first tx)))
+                   (if (and (vector? tx) (= :nmdt/cas (first tx)))
                      (apply cas/cas (into [db] (drop 1 tx)))
                      [tx]))
                  full-tx))))
@@ -139,12 +139,12 @@
         cas-op (->> tx
                     (filter vector?)
                     (filter not-empty)
-                    (filter #(= :ndt/cas (first %)))
+                    (filter #(= :nmdt/cas (first %)))
                     (first))
         _ (when (nil? cas-op)
-            (throw (ex-info "Transaction must contain :ndt/cas operation" {:tx tx :sha sha})))
+            (throw (ex-info "Transaction must contain :nmdt/cas operation" {:tx tx :sha sha})))
         [op e a old-v new-v] cas-op]
-    (assert (= 5 (count cas-op)) "tx must be a :ndt/cas operation")
+    (assert (= 5 (count cas-op)) "tx must be a :nmdt/cas operation")
     (assert (keyword? a) ":a must be a keyword")
     (assert (some? new-v) ":v must be some?")
     #_(if-let [return-early (return-cas-success-value (d/db conn) cas-op sha)]
