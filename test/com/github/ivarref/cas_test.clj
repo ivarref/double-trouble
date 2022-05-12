@@ -35,7 +35,7 @@
     (try
       @(d/transact conn ndt/schema)
       @(d/transact conn test-schema)
-      @(d/transact conn [(gen-fn/generate-function 'com.github.ivarref.no-more-double-trouble.dbfns.cas/cas :ndt/cas false)])
+      @(d/transact conn [(gen-fn/generate-function 'com.github.ivarref.no-more-double-trouble.dbfns.cas/cas :nmdt/cas false)])
       (binding [*conn* conn]
         (f))
       (finally
@@ -67,18 +67,18 @@
 
 
 (deftest test-rejects
-  (is (= "Entity cannot be string" (err-msg @(d/transact *conn* [[:ndt/cas "string-not-allowed" :e/version nil 1]]))))
-  (is (= "Entity cannot be tempid/datomic.db.DbId" (err-msg @(d/transact *conn* [[:ndt/cas (d/tempid :db.part/user) :e/version nil 1]]))))
-  (is (= "Old-val must be nil for new entities" (err-msg @(d/transact *conn* [[:ndt/cas [:e/id "a" :as "tempid"] :e/version 2 1]])))))
+  (is (= "Entity cannot be string" (err-msg @(d/transact *conn* [[:nmdt/cas "string-not-allowed" :e/version nil 1]]))))
+  (is (= "Entity cannot be tempid/datomic.db.DbId" (err-msg @(d/transact *conn* [[:nmdt/cas (d/tempid :db.part/user) :e/version nil 1]]))))
+  (is (= "Old-val must be nil for new entities" (err-msg @(d/transact *conn* [[:nmdt/cas [:e/id "a" :as "tempid"] :e/version 2 1]])))))
 
 (deftest unknown-tempid-should-throw
-  (is (= "Could not resolve tempid" (err-msg (ndt/resolve-tempids (d/db *conn*) [[:ndt/cas "unknown" :e/version nil 1]
+  (is (= "Could not resolve tempid" (err-msg (ndt/resolve-tempids (d/db *conn*) [[:nmdt/cas "unknown" :e/version nil 1]
                                                                                  {:db/id "tempid" :e/id "a" :e/info "1"}])))))
 
 (deftest resolve-tempid
-  (is (= [[:ndt/cas [:e/id "a" :as "tempid"] :e/version nil 1]
+  (is (= [[:nmdt/cas [:e/id "a" :as "tempid"] :e/version nil 1]
           {:db/id "tempid" :e/id "a" :e/info "1"}]
-         (ndt/resolve-tempids (d/db *conn*) [[:ndt/cas "tempid" :e/version nil 1]
+         (ndt/resolve-tempids (d/db *conn*) [[:nmdt/cas "tempid" :e/version nil 1]
                                              {:db/id "tempid" :e/id "a" :e/info "1"}]))))
 
 (deftest nil-test
@@ -98,14 +98,14 @@
 
 
 (deftest happy-case
-  (let [{:keys [db-after]} @(d/transact *conn* [[:ndt/cas [:e/id "a" :as "tempid"] :e/version nil 1]
+  (let [{:keys [db-after]} @(d/transact *conn* [[:nmdt/cas [:e/id "a" :as "tempid"] :e/version nil 1]
                                                 {:db/id "tempid" :e/id "a" :e/info "1"}])]
     (is (= #:e{:id "a" :info "1" :version 1} (d/pull db-after [:e/id :e/info :e/version] [:e/id "a"]))))
-  (let [{:keys [db-after]} @(d/transact *conn* [[:ndt/cas [:e/id "a" :as "tempid"] :e/version 1 2]
+  (let [{:keys [db-after]} @(d/transact *conn* [[:nmdt/cas [:e/id "a" :as "tempid"] :e/version 1 2]
                                                 {:db/id "tempid" :e/id "a" :e/info "2"}])]
     (is (= #:e{:id "a" :info "2" :version 2} (d/pull db-after [:e/id :e/info :e/version] [:e/id "a"]))))
 
-  (is (= ":db.error/cas-failed Compare failed: 999 2" (err-msg @(d/transact *conn* [[:ndt/cas [:e/id "a" :as "tempid"] :e/version 999 3]
+  (is (= ":db.error/cas-failed Compare failed: 999 2" (err-msg @(d/transact *conn* [[:nmdt/cas [:e/id "a" :as "tempid"] :e/version 999 3]
                                                                                     {:db/id "tempid" :e/id "a" :e/info "2"}])))))
 
 
@@ -128,47 +128,47 @@
           [:db/add "tempid" :e/version 1]]
          (expand
            [{:db/id "tempid", :e/id2 "a", :e/info "1"}
-            [:ndt/cas [:e/id2 "a" :as "tempid"] :e/version nil 1]])
+            [:nmdt/cas [:e/id2 "a" :as "tempid"] :e/version nil 1]])
          (expand
            [{:db/id "tempid", :e/id2 "a", :e/info "1"}
-            [:ndt/cas "tempid" :e/version nil 1]]))))
+            [:nmdt/cas "tempid" :e/version nil 1]]))))
 
 (deftest ndt-insert-unique-value-behaviour
   (transact [{:db/id "tempid", :e/id2 "a", :e/info "1"}
-             [:ndt/cas "tempid" :e/version nil 1]])
+             [:nmdt/cas "tempid" :e/version nil 1]])
   (is (= #:e{:id2 "a", :info "1", :version 1} (pull [:e/id2 "a"])))
 
   (is (= "Cannot use tempid for existing :db.unique/value entities"
          (err-msg (transact [{:db/id "tempid", :e/id2 "a", :e/info "1"}
-                             [:ndt/cas "tempid" :e/version nil 1]]))))
+                             [:nmdt/cas "tempid" :e/version nil 1]]))))
 
-  (transact [[:ndt/cas [:e/id2 "a"] :e/version 1 2]])
+  (transact [[:nmdt/cas [:e/id2 "a"] :e/version 1 2]])
   (is (= #:e{:id2 "a", :info "1", :version 2} (pull [:e/id2 "a"])))
 
   (transact [{:db/id [:e/id2 "a"] :e/info "2"}
-             [:ndt/cas [:e/id2 "a"] :e/version 2 3]])
+             [:nmdt/cas [:e/id2 "a"] :e/version 2 3]])
   (is (= #:e{:id2 "a", :info "2", :version 3} (pull [:e/id2 "a"]))))
 
 #_(deftest resolved-tempids
     (let [tempids (:tempids (transact [{:db/id "tempid", :e/id "a", :e/info "1"}
-                                       [:ndt/cas "tempid" :e/version nil 1]]))]
+                                       [:nmdt/cas "tempid" :e/version nil 1]]))]
       (is (= tempids (:tempids (transact [{:db/id "tempid", :e/id "a", :e/info "1"}
-                                          [:ndt/cas "tempid" :e/version nil 1]]))))))
+                                          [:nmdt/cas "tempid" :e/version nil 1]]))))))
 
 
 
 (deftest transacted?
   (is (true? (:transacted? (transact [{:db/id "tempid", :e/id "a", :e/info "1"}
-                                      [:ndt/cas "tempid" :e/version nil 1]]))))
+                                      [:nmdt/cas "tempid" :e/version nil 1]]))))
 
   (is (false? (:transacted? (transact [{:db/id "tempid", :e/id "a", :e/info "1"}
-                                       [:ndt/cas "tempid" :e/version nil 1]]))))
+                                       [:nmdt/cas "tempid" :e/version nil 1]]))))
 
   (is (true? (:transacted? (transact [{:e/id "a" :e/info "2"}
-                                      [:ndt/cas [:e/id "a"] :e/version 1 2]]))))
+                                      [:nmdt/cas [:e/id "a"] :e/version 1 2]]))))
 
   (is (false? (:transacted? (transact [{:e/id "a" :e/info "2"}
-                                       [:ndt/cas [:e/id "a"] :e/version 1 2]]))))
+                                       [:nmdt/cas [:e/id "a"] :e/version 1 2]]))))
 
   (is (= 2 (:v (transact [{:e/id "a" :e/info "2"}
-                          [:ndt/cas [:e/id "a"] :e/version 1 2]])))))
+                          [:nmdt/cas [:e/id "a"] :e/version 1 2]])))))

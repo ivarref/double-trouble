@@ -91,4 +91,4 @@
       out-str)))
 
 (comment
-  (generate-function 'com.github.ivarref.no-more-double-trouble.dbfns.cas/cas :ndt/cas true))
+  (generate-function 'com.github.ivarref.no-more-double-trouble.dbfns.cas/cas :nmdt/cas true))
