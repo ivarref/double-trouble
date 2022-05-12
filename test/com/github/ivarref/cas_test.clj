@@ -8,7 +8,8 @@
             [com.github.ivarref.stacktrace]
             [com.github.ivarref.debug]
             [com.github.ivarref.no-more-double-trouble.dbfns.cas :as cas]
-            [clojure.tools.logging :as log]))
+            [clojure.tools.logging :as log]
+            [clojure.string :as str]))
 
 (log-init/init-logging!
   [[#{"datomic.*" "com.datomic.*" "org.apache.*"} :warn]
@@ -148,6 +149,16 @@
   (transact [{:db/id [:e/id2 "a"] :e/info "2"}
              [:nmdt/cas [:e/id2 "a"] :e/version 2 3]])
   (is (= #:e{:id2 "a", :info "2", :version 3} (pull [:e/id2 "a"]))))
+
+
+(deftest duplicate-sha
+  @(nmdt/transact *conn* (nmdt/sha "hello") [{:db/id "tempid" :e/id "a" :e/info "1"}
+                                             [:nmdt/cas "tempid" :e/version nil 1]])
+  (is (true? (str/starts-with?
+               (err-msg @(nmdt/transact *conn* (nmdt/sha "hello") [{:db/id "tempid" :e/id "b" :e/info "2"}
+                                                                   [:nmdt/cas "tempid" :e/version nil 1]]))
+               ":db.error/unique-conflict Unique conflict: :com.github.ivarref.no-more-double-trouble/sha-1"))))
+
 
 #_(deftest resolved-tempids
     (let [tempids (:tempids (transact [{:db/id "tempid", :e/id "a", :e/info "1"}

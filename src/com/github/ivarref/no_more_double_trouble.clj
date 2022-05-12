@@ -2,7 +2,8 @@
   (:require [com.github.ivarref.no-more-double-trouble.sha :as sha]
             [com.github.ivarref.no-more-double-trouble.dbfns.cas :as cas]
             [com.github.ivarref.no-more-double-trouble.generated :as gen]
-            [datomic.api :as d])
+            [datomic.api :as d]
+            [clojure.string :as str])
   (:import (datomic Connection)
            (clojure.lang IDeref IBlockingDeref IPending)
            (java.util.concurrent Future TimeUnit TimeoutException)))
@@ -28,6 +29,14 @@
                  (= attr (:a m)))
         m))))
 
+(defn sha-unique-failure [^Throwable e]
+  (when-let [root-cause (root-cause e)]
+    (when-let [m (ex-data root-cause)]
+      (when (and (= :db.error/unique-conflict (:db/error m))
+                 (string? (:cognitect.anomalies/message m))
+                 (str/starts-with? (:cognitect.anomalies/message m)
+                                   "Unique conflict: :com.github.ivarref.no-more-double-trouble/sha-1"))
+        m))))
 
 (defn return-cas-success-value [db cas-lock sha]
   (let [[_op e a v-old v-new] cas-lock
@@ -126,10 +135,16 @@
      (let [res# ~get-res]
        (assoc res# :v ~new-v :transacted? true))
      (catch Exception exception#
-       (if (not (cas-failure-for-attr exception# ~a))
-         (throw exception#)
+       (cond
+         (sha-unique-failure exception#)
+         (throw (ex-info "SHA already asserted" {:sha sha} exception#))
+
+         (cas-failure-for-attr exception# ~a)
          (or (return-cas-success-value (d/db ~conn) ~cas-op ~sha)
-             (throw exception#))))))
+             (throw exception#))
+
+         :else
+         (throw exception#)))))
 
 (defn transact [conn sha tx]
   (assert (instance? Connection conn) "conn must be an instance of datomic.Connection")
