@@ -3,11 +3,11 @@
             [clojure.edn :as edn]
             [com.github.ivarref.log-init :as log-init]
             [datomic.api :as d]
-            [com.github.ivarref.no-double-trouble :as ndt]
+            [com.github.ivarref.no-more-double-trouble :as ndt]
             [com.github.ivarref.dbfns.generate-fn :as gen-fn]
             [com.github.ivarref.stacktrace]
             [com.github.ivarref.debug]
-            [com.github.ivarref.no-double-trouble.dbfns.cas :as cas]
+            [com.github.ivarref.no-more-double-trouble.dbfns.cas :as cas]
             [clojure.tools.logging :as log]))
 
 (log-init/init-logging!

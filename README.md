@@ -9,7 +9,7 @@ Handle duplicate Datomic transactions with ease.
 ## 1-minute example
 
 ```clojure
-(require '[com.github.ivarref.no_double_trouble :as ndt])
+(require '[com.github.ivarref.no_more_double_trouble :as ndt])
 (require '[datomic.api :as d])
 
 (def conn (d/connect "..."))

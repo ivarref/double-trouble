@@ -1,4 +1,4 @@
-(ns com.github.ivarref.no-double-trouble.sha
+(ns com.github.ivarref.no-more-double-trouble.sha
   (:require [clojure.walk :as walk]
             [clojure.edn :as edn]
             [clojure.string :as str])

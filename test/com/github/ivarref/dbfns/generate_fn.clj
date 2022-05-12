@@ -36,7 +36,7 @@
 (defn generate-function [fqn db-name write-to-file]
   (let [fil (fqn->fil fqn)
         ident (fqn->fn fqn)
-        out-fil "src/com/github/ivarref/no_double_trouble/generated.clj"
+        out-fil "src/com/github/ivarref/no_more_double_trouble/generated.clj"
         reqs (-> (z/of-file fil)
                  (z/find-value z/next 'ns)
                  (z/find-value z/next :require)
@@ -91,4 +91,4 @@
       out-str)))
 
 (comment
-  (generate-function 'com.github.ivarref.no-double-trouble.dbfns.cas/cas :ndt/cas true))
+  (generate-function 'com.github.ivarref.no-more-double-trouble.dbfns.cas/cas :ndt/cas true))

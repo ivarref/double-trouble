@@ -1,4 +1,4 @@
-(ns com.github.ivarref.no-double-trouble.dbfns.cas
+(ns com.github.ivarref.no-more-double-trouble.dbfns.cas
   (:require [clojure.walk :as walk]
             [datomic.api :as d])
   (:import (java.util HashSet List)

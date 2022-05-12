@@ -1,7 +1,7 @@
-(ns com.github.ivarref.no-double-trouble
-  (:require [com.github.ivarref.no-double-trouble.sha :as sha]
-            [com.github.ivarref.no-double-trouble.dbfns.cas :as cas]
-            [com.github.ivarref.no-double-trouble.generated :as gen]
+(ns com.github.ivarref.no-more-double-trouble
+  (:require [com.github.ivarref.no-more-double-trouble.sha :as sha]
+            [com.github.ivarref.no-more-double-trouble.dbfns.cas :as cas]
+            [com.github.ivarref.no-more-double-trouble.generated :as gen]
             [datomic.api :as d])
   (:import (datomic Connection)
            (clojure.lang IDeref IBlockingDeref IPending)
