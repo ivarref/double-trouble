@@ -149,6 +149,14 @@
              [:ndt/cas [:e/id2 "a"] :e/version 2 3]])
   (is (= #:e{:id2 "a", :info "2", :version 3} (pull [:e/id2 "a"]))))
 
+#_(deftest resolved-tempids
+    (let [tempids (:tempids (transact [{:db/id "tempid", :e/id "a", :e/info "1"}
+                                       [:ndt/cas "tempid" :e/version nil 1]]))]
+      (is (= tempids (:tempids (transact [{:db/id "tempid", :e/id "a", :e/info "1"}
+                                          [:ndt/cas "tempid" :e/version nil 1]]))))))
+
+
+
 (deftest transacted?
   (is (true? (:transacted? (transact [{:db/id "tempid", :e/id "a", :e/info "1"}
                                       [:ndt/cas "tempid" :e/version nil 1]]))))

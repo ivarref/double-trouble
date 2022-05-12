@@ -59,7 +59,8 @@
                              e
                              a
                              sha)]
-        {:v           v
+        {:tempids     {"datomic.tx" tx}
+         :v           v
          :transacted? false
          :db-after    (d/as-of db tx)
          :db-before   (d/as-of db (dec tx))}))))
