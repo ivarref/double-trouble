@@ -20,6 +20,8 @@
 
 (def test-schema
   [#:db{:ident :e/id, :cardinality :db.cardinality/one, :valueType :db.type/string :unique :db.unique/identity}
+   #:db{:ident :e/identity, :cardinality :db.cardinality/one, :valueType :db.type/string :unique :db.unique/identity}
+   #:db{:ident :e/unique-value, :cardinality :db.cardinality/one, :valueType :db.type/string :unique :db.unique/value}
    #:db{:ident :e/id2, :cardinality :db.cardinality/one, :valueType :db.type/string :unique :db.unique/value}
    #:db{:ident :e/sha, :cardinality :db.cardinality/one, :valueType :db.type/string}
    #:db{:ident :e/version, :cardinality :db.cardinality/one, :valueType :db.type/long}
@@ -159,6 +161,27 @@
                                                                    [:nmdt/cas "tempid" :e/version nil 1]]))
                ":db.error/unique-conflict Unique conflict: :com.github.ivarref.no-more-double-trouble/sha-1"))))
 
+(deftest cas-unique-conflict-error-ordering
+  @(d/transact *conn* [#:db{:ident :e/identity, :cardinality :db.cardinality/one, :valueType :db.type/string :unique :db.unique/identity}
+                       #:db{:ident :e/unique-value, :cardinality :db.cardinality/one, :valueType :db.type/string :unique :db.unique/value}])
+  @(d/transact *conn* [{:e/identity "a" :e/version 1}
+                       {:e/unique-value "b" :e/version 2}])
+  (try
+    @(d/transact *conn* [{:e/unique-value "b" :e/version 3}])
+    (is (= 1 0))
+    (catch Exception e
+      (is (true?
+            (str/starts-with?
+              (ex-message e)
+              "java.lang.IllegalStateException: :db.error/unique-conflict Unique conflict: :e/unique-value")))))
+  (dotimes [_ 1000]
+    (try
+      @(d/transact *conn* (vec (shuffle [[:db/cas [:e/identity "a"] :e/version 2 1]
+                                         {:e/unique-value "b" :e/version 3}])))
+      (is (= 1 0))
+      (catch Exception e
+        (is (= "java.lang.IllegalStateException: :db.error/cas-failed Compare failed: 2 1"
+               (ex-message e)))))))
 
 #_(deftest resolved-tempids
     (let [tempids (:tempids (transact [{:db/id "tempid", :e/id "a", :e/info "1"}

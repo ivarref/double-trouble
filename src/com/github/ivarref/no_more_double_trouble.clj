@@ -162,9 +162,9 @@
     (assert (= 5 (count cas-op)) "tx must be a :nmdt/cas operation")
     (assert (keyword? a) ":a must be a keyword")
     (assert (some? new-v) ":v must be some?")
-    (let [full-tx (into [{:db/id                                           "datomic.tx"
-                          :com.github.ivarref.no-more-double-trouble/sha-1 sha}]
-                        tx)
+    (let [full-tx (vec (shuffle (into [{:db/id                                           "datomic.tx"
+                                        :com.github.ivarref.no-more-double-trouble/sha-1 sha}]
+                                      tx)))
           fut (d/transact conn full-tx)]
       (reify
         IDeref
