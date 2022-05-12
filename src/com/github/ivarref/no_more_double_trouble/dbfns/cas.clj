@@ -79,10 +79,8 @@
                    :cognitect.anomalies/message  "Old-val must be nil for new entities"})))
 
     :else
-    (do
-      (println e-or-lookup-ref)
-      (d/cancel {:cognitect.anomalies/category :cognitect.anomalies/incorrect
-                 :cognitect.anomalies/message  "Unhandled state"}))))
+    (d/cancel {:cognitect.anomalies/category :cognitect.anomalies/incorrect
+               :cognitect.anomalies/message  "Unhandled state"})))
 
 
 
