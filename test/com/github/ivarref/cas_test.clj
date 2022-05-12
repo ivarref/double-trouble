@@ -3,7 +3,7 @@
             [clojure.edn :as edn]
             [com.github.ivarref.log-init :as log-init]
             [datomic.api :as d]
-            [com.github.ivarref.no-more-double-trouble :as ndt]
+            [com.github.ivarref.no-more-double-trouble :as nmdt]
             [com.github.ivarref.dbfns.generate-fn :as gen-fn]
             [com.github.ivarref.stacktrace]
             [com.github.ivarref.debug]
@@ -33,7 +33,7 @@
                (d/create-database uri)
                (d/connect uri))]
     (try
-      @(d/transact conn ndt/schema)
+      @(d/transact conn nmdt/schema)
       @(d/transact conn test-schema)
       @(d/transact conn [(gen-fn/generate-function 'com.github.ivarref.no-more-double-trouble.dbfns.cas/cas :nmdt/cas false)])
       (binding [*conn* conn]
@@ -57,10 +57,10 @@
        (ex-message (root-cause e#)))))
 
 (defn expand [x]
-  (ndt/expand-tx (d/db *conn*) x))
+  (nmdt/expand-tx (d/db *conn*) x))
 
 (defn transact [x]
-  @(ndt/transact *conn* (ndt/sha x) x))
+  @(nmdt/transact *conn* (nmdt/sha x) x))
 
 (defn pull [e]
   (dissoc (d/pull (d/db *conn*) [:*] e) :db/id))
@@ -72,14 +72,14 @@
   (is (= "Old-val must be nil for new entities" (err-msg @(d/transact *conn* [[:nmdt/cas [:e/id "a" :as "tempid"] :e/version 2 1]])))))
 
 (deftest unknown-tempid-should-throw
-  (is (= "Could not resolve tempid" (err-msg (ndt/resolve-tempids (d/db *conn*) [[:nmdt/cas "unknown" :e/version nil 1]
-                                                                                 {:db/id "tempid" :e/id "a" :e/info "1"}])))))
+  (is (= "Could not resolve tempid" (err-msg (nmdt/resolve-tempids (d/db *conn*) [[:nmdt/cas "unknown" :e/version nil 1]
+                                                                                  {:db/id "tempid" :e/id "a" :e/info "1"}])))))
 
 (deftest resolve-tempid
   (is (= [[:nmdt/cas [:e/id "a" :as "tempid"] :e/version nil 1]
           {:db/id "tempid" :e/id "a" :e/info "1"}]
-         (ndt/resolve-tempids (d/db *conn*) [[:nmdt/cas "tempid" :e/version nil 1]
-                                             {:db/id "tempid" :e/id "a" :e/info "1"}]))))
+         (nmdt/resolve-tempids (d/db *conn*) [[:nmdt/cas "tempid" :e/version nil 1]
+                                              {:db/id "tempid" :e/id "a" :e/info "1"}]))))
 
 (deftest nil-test
   @(d/transact *conn* [{:e/id "a" :e/info "1"}])
