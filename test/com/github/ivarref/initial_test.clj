@@ -36,13 +36,6 @@
 
 (test/use-fixtures :each with-new-conn)
 
-
-(comment)
-[[:db/add "ent" :e/version 1]
- {:db/id "ent" :e/id "a" :e/info "a"}]
-
-(comment)
-
 (deftest add-vs-cas
   (let [{:keys [db-after]} @(d/transact *conn* [[:db/add "ent" :e/version 1]
                                                 {:db/id "ent" :e/id "a" :e/info "a"}])]
