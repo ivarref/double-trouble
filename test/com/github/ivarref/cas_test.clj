@@ -4,7 +4,7 @@
             [com.github.ivarref.log-init :as log-init]
             [datomic.api :as d]
             [com.github.ivarref.no-more-double-trouble :as nmdt]
-            [com.github.ivarref.dbfns.generate-fn :as gen-fn]
+            [com.github.ivarref.gen-fn :as gen-fn]
             [com.github.ivarref.stacktrace]
             [com.github.ivarref.debug]
             [com.github.ivarref.no-more-double-trouble.dbfns.cas :as cas]
@@ -38,7 +38,7 @@
     (try
       @(d/transact conn nmdt/schema)
       @(d/transact conn test-schema)
-      @(d/transact conn [(gen-fn/generate-function 'com.github.ivarref.no-more-double-trouble.dbfns.cas/cas :nmdt/cas false)])
+      @(d/transact conn [(gen-fn/datomic-fn :nmdt/cas #'cas/cas)])
       (binding [*conn* conn]
         (f))
       (finally

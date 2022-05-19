@@ -11,7 +11,7 @@
 (def schema
   (into
     [#:db{:ident :com.github.ivarref.no-more-double-trouble/sha-1 :cardinality :db.cardinality/one :valueType :db.type/string :unique :db.unique/value}]
-    gen/fns))
+    gen/schema))
 
 
 (defn sha [m]
