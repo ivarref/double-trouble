@@ -205,9 +205,4 @@
                          [:dt/cas [:e/id "a"] :e/version 1 2 "sha-2"]])
     (fail "Should not get here")
     (catch Exception e
-      (if (dt/already-transacted? e)
-        (is (= 1 1))
-        (fail "Should not get here"))))
-
-  #_(is (= 2 (:v (transact [{:e/id "a" :e/info "2"}
-                            [:dt/cas [:e/id "a"] :e/version 1 2 "sha-2"]])))))
+      (is (true? (dt/already-transacted? e))))))
