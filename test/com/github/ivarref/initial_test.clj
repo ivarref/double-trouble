@@ -1,6 +1,6 @@
 (ns com.github.ivarref.initial-test
   (:require [clojure.test :as test :refer [deftest is]]
-            [com.github.ivarref.no-more-double-trouble :as ndt]
+            [com.github.ivarref.double-trouble :as ndt]
             [com.github.ivarref.log-init :as log-init]
             [datomic.api :as d]
             [clojure.edn :as edn]))

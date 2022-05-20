@@ -1,4 +1,4 @@
-# no-more-double-trouble
+# [No more] double trouble
 
 Handle duplicate Datomic transactions with ease.
 
@@ -9,12 +9,12 @@ Handle duplicate Datomic transactions with ease.
 ## 1-minute example
 
 ```clojure
-(require '[com.github.ivarref.no-more-double-trouble :as nmdt])
+(require '[com.github.ivarref.double-trouble :as dt])
 (require '[datomic.api :as d])
 
 (def conn (d/connect "..."))
 
-; Setup no-more-double-trouble's schema:
-@(d/transact conn nmdt/schema)
+; Setup:
+@(d/transact conn dt/schema)
 
 ```

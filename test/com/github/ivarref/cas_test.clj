@@ -3,7 +3,7 @@
             [clojure.edn :as edn]
             [com.github.ivarref.log-init :as log-init]
             [datomic.api :as d]
-            [com.github.ivarref.no-more-double-trouble :as nmdt]
+            [com.github.ivarref.double-trouble :as nmdt]
             [com.github.ivarref.gen-fn :as gen-fn]
             [com.github.ivarref.stacktrace]
             [com.github.ivarref.debug]

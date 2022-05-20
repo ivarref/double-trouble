@@ -1,4 +1,4 @@
-(ns com.github.ivarref.no-more-double-trouble.generated
+(ns com.github.ivarref.double-trouble.generated
   (:require [clojure.edn :as edn]
             [datomic.api]))
 

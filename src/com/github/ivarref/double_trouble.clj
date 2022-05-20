@@ -1,4 +1,4 @@
-(ns com.github.ivarref.no-more-double-trouble
+(ns com.github.ivarref.double-trouble
   (:require [com.github.ivarref.no-more-double-trouble.sha :as sha]
             [com.github.ivarref.no-more-double-trouble.dbfns.cas :as cas]
             [com.github.ivarref.no-more-double-trouble.generated :as gen]
@@ -10,7 +10,7 @@
 
 (def schema
   (into
-    [#:db{:ident :com.github.ivarref.no-more-double-trouble/sha-1 :cardinality :db.cardinality/one :valueType :db.type/string :unique :db.unique/value}]
+    [#:db{:ident :com.github.ivarref.double-trouble/sha-1 :cardinality :db.cardinality/one :valueType :db.type/string :unique :db.unique/value}]
     gen/schema))
 
 
