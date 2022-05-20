@@ -1,7 +1,7 @@
 (ns com.github.ivarref.double-trouble
-  (:require [com.github.ivarref.no-more-double-trouble.sha :as sha]
-            [com.github.ivarref.no-more-double-trouble.dbfns.cas :as cas]
-            [com.github.ivarref.no-more-double-trouble.generated :as gen]
+  (:require [com.github.ivarref.double-trouble.sha :as sha]
+            [com.github.ivarref.double-trouble.cas :as cas]
+            [com.github.ivarref.double-trouble.generated :as gen]
             [datomic.api :as d]
             [clojure.string :as str])
   (:import (datomic Connection)
@@ -48,7 +48,7 @@
                                :in $ ?e ?a ?v-old ?sha
                                :where
                                [?e ?a ?v-old ?tx false]
-                               [?tx :com.github.ivarref.no-more-double-trouble/sha-1 ?sha ?tx true]
+                               [?tx :com.github.ivarref.double-trouble/sha-1 ?sha ?tx true]
                                [?e ?a ?v ?tx true]]
                              (d/history db)
                              e
@@ -63,7 +63,7 @@
                                :in $ ?e ?a ?sha
                                :where
                                [?e ?a ?v ?tx true]
-                               [?tx :com.github.ivarref.no-more-double-trouble/sha-1 ?sha ?tx true]]
+                               [?tx :com.github.ivarref.double-trouble/sha-1 ?sha ?tx true]]
                              (d/history db)
                              e
                              a
@@ -162,8 +162,8 @@
     (assert (= 5 (count cas-op)) "tx must be a :nmdt/cas operation")
     (assert (keyword? a) ":a must be a keyword")
     (assert (some? new-v) ":v must be some?")
-    (let [full-tx (vec (shuffle (into [{:db/id                                           "datomic.tx"
-                                        :com.github.ivarref.no-more-double-trouble/sha-1 sha}]
+    (let [full-tx (vec (shuffle (into [{:db/id                                   "datomic.tx"
+                                        :com.github.ivarref.double-trouble/sha-1 sha}]
                                       tx)))
           fut (d/transact conn full-tx)]
       (reify

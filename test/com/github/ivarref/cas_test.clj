@@ -3,11 +3,11 @@
             [clojure.edn :as edn]
             [com.github.ivarref.log-init :as log-init]
             [datomic.api :as d]
-            [com.github.ivarref.double-trouble :as nmdt]
+            [com.github.ivarref.double-trouble :as dt]
             [com.github.ivarref.gen-fn :as gen-fn]
             [com.github.ivarref.stacktrace]
             [com.github.ivarref.debug]
-            [com.github.ivarref.no-more-double-trouble.dbfns.cas :as cas]
+            [com.github.ivarref.double-trouble.cas :as cas]
             [clojure.tools.logging :as log]
             [clojure.string :as str]))
 
@@ -36,7 +36,7 @@
                (d/create-database uri)
                (d/connect uri))]
     (try
-      @(d/transact conn nmdt/schema)
+      @(d/transact conn dt/schema)
       @(d/transact conn test-schema)
       @(d/transact conn [(gen-fn/datomic-fn :nmdt/cas #'cas/cas)])
       (binding [*conn* conn]
@@ -60,10 +60,10 @@
        (ex-message (root-cause e#)))))
 
 (defn expand [x]
-  (nmdt/expand-tx (d/db *conn*) x))
+  (dt/expand-tx (d/db *conn*) x))
 
 (defn transact [x]
-  @(nmdt/transact *conn* (nmdt/sha x) x))
+  @(dt/transact *conn* (dt/sha x) x))
 
 (defn pull [e]
   (dissoc (d/pull (d/db *conn*) [:*] e) :db/id))
@@ -75,14 +75,14 @@
   (is (= "Old-val must be nil for new entities" (err-msg @(d/transact *conn* [[:nmdt/cas [:e/id "a" :as "tempid"] :e/version 2 1]])))))
 
 (deftest unknown-tempid-should-throw
-  (is (= "Could not resolve tempid" (err-msg (nmdt/resolve-tempids (d/db *conn*) [[:nmdt/cas "unknown" :e/version nil 1]
-                                                                                  {:db/id "tempid" :e/id "a" :e/info "1"}])))))
+  (is (= "Could not resolve tempid" (err-msg (dt/resolve-tempids (d/db *conn*) [[:nmdt/cas "unknown" :e/version nil 1]
+                                                                                {:db/id "tempid" :e/id "a" :e/info "1"}])))))
 
 (deftest resolve-tempid
   (is (= [[:nmdt/cas [:e/id "a" :as "tempid"] :e/version nil 1]
           {:db/id "tempid" :e/id "a" :e/info "1"}]
-         (nmdt/resolve-tempids (d/db *conn*) [[:nmdt/cas "tempid" :e/version nil 1]
-                                              {:db/id "tempid" :e/id "a" :e/info "1"}]))))
+         (dt/resolve-tempids (d/db *conn*) [[:nmdt/cas "tempid" :e/version nil 1]
+                                            {:db/id "tempid" :e/id "a" :e/info "1"}]))))
 
 (deftest nil-test
   @(d/transact *conn* [{:e/id "a" :e/info "1"}])
@@ -154,11 +154,11 @@
 
 
 (deftest duplicate-sha
-  @(nmdt/transact *conn* (nmdt/sha "hello") [{:db/id "tempid" :e/id "a" :e/info "1"}
-                                             [:nmdt/cas "tempid" :e/version nil 1]])
+  @(dt/transact *conn* (dt/sha "hello") [{:db/id "tempid" :e/id "a" :e/info "1"}
+                                         [:nmdt/cas "tempid" :e/version nil 1]])
   (is (true? (str/starts-with?
-               (err-msg @(nmdt/transact *conn* (nmdt/sha "hello") [{:db/id "tempid" :e/id "b" :e/info "2"}
-                                                                   [:nmdt/cas "tempid" :e/version nil 1]]))
+               (err-msg @(dt/transact *conn* (dt/sha "hello") [{:db/id "tempid" :e/id "b" :e/info "2"}
+                                                               [:nmdt/cas "tempid" :e/version nil 1]]))
                ":db.error/unique-conflict Unique conflict: :com.github.ivarref.no-more-double-trouble/sha-1"))))
 
 (deftest cas-unique-conflict-error-ordering
