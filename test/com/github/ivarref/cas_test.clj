@@ -38,7 +38,7 @@
     (try
       @(d/transact conn dt/schema)
       @(d/transact conn test-schema)
-      @(d/transact conn [(gen-fn/datomic-fn :nmdt/cas #'cas/cas)])
+      @(d/transact conn [(gen-fn/datomic-fn :dt/cas #'cas/cas)])
       (binding [*conn* conn]
         (f))
       (finally
@@ -70,29 +70,29 @@
 
 
 (deftest test-rejects
-  (is (= "Entity cannot be string" (err-msg @(d/transact *conn* [[:nmdt/cas "string-not-allowed" :e/version nil 1]]))))
-  (is (= "Entity cannot be tempid/datomic.db.DbId" (err-msg @(d/transact *conn* [[:nmdt/cas (d/tempid :db.part/user) :e/version nil 1]]))))
-  (is (= "Old-val must be nil for new entities" (err-msg @(d/transact *conn* [[:nmdt/cas [:e/id "a" :as "tempid"] :e/version 2 1]])))))
+  (is (= "Entity cannot be string" (err-msg @(d/transact *conn* [[:dt/cas "string-not-allowed" :e/version nil 1 "some-sha"]]))))
+  (is (= "Entity cannot be tempid/datomic.db.DbId" (err-msg @(d/transact *conn* [[:dt/cas (d/tempid :db.part/user) :e/version nil 1 "some-sha"]]))))
+  (is (= "Old-val must be nil for new entities" (err-msg @(d/transact *conn* [[:dt/cas [:e/id "a" :as "tempid"] :e/version 2 1 "some-sha"]])))))
 
 (deftest unknown-tempid-should-throw
-  (is (= "Could not resolve tempid" (err-msg (dt/resolve-tempids (d/db *conn*) [[:nmdt/cas "unknown" :e/version nil 1]
+  (is (= "Could not resolve tempid" (err-msg (dt/resolve-tempids (d/db *conn*) [[:dt/cas "unknown" :e/version nil 1 "some-sha"]
                                                                                 {:db/id "tempid" :e/id "a" :e/info "1"}])))))
 
 (deftest resolve-tempid
-  (is (= [[:nmdt/cas [:e/id "a" :as "tempid"] :e/version nil 1]
+  (is (= [[:dt/cas [:e/id "a" :as "tempid"] :e/version nil 1 "some-sha"]
           {:db/id "tempid" :e/id "a" :e/info "1"}]
-         (dt/resolve-tempids (d/db *conn*) [[:nmdt/cas "tempid" :e/version nil 1]
-                                            {:db/id "tempid" :e/id "a" :e/info "1"}]))))
+         (pp (dt/resolve-tempids (d/db *conn*) [[:dt/cas "tempid" :e/version nil 1 "some-sha"]
+                                                {:db/id "tempid" :e/id "a" :e/info "1"}])))))
 
 (deftest nil-test
   @(d/transact *conn* [{:e/id "a" :e/info "1"}])
   @(d/transact *conn* [[:db/cas [:e/id "a"] :e/version nil 1]]))
 
 
-(deftest ndt-nil-test
+(deftest dt-nil-test
   @(d/transact *conn* [{:e/id "a" :e/info "1"}])
   (is (= [[:db/cas [:e/id "a"] :e/version nil 1]]
-         (cas/cas (d/db *conn*) [:e/id "a"] :e/version nil 1))))
+         (cas/cas (d/db *conn*) [:e/id "a"] :e/version nil 1 "some-sha"))))
 
 
 (deftest nil-test-2

@@ -78,15 +78,15 @@
   (cond
     (and (vector? single)
          (>= (count single) 1)
-         (= :nmdt/cas (first single))
-         (not= 5 (count single)))
-    (throw (ex-info ":nmdt/cas requires exactly 5 arguments" {:tx single}))
+         (= :dt/cas (first single))
+         (not= 6 (count single)))
+    (throw (ex-info ":nmdt/cas requires exactly 6 arguments" {:tx single}))
 
     (and (vector? single)
          (>= (count single) 1)
-         (= :nmdt/cas (first single))
-         (= 5 (count single)))
-    (let [[op e a old-v new-v] single]
+         (= :dt/cas (first single))
+         (= 6 (count single)))
+    (let [[op e a old-v new-v sha-val] single]
       (if (string? e)
         (if-let [ref (->> full-tx
                           (filter map?)
@@ -98,7 +98,7 @@
                                              (when (and (cas/is-unique-value? db k)
                                                         (some? (:db/id (d/pull db [:db/id] [k v]))))
                                                (throw (ex-info "Cannot use tempid for existing :db.unique/value entities" {})))
-                                             (reduced [op [k v :as e] a old-v new-v])))
+                                             (reduced [op [k v :as e] a old-v new-v sha-val])))
                                          nil
                                          (dissoc ref :db/id))]
             new-single
@@ -116,7 +116,7 @@
 (defn expand-tx [db full-tx]
   (let [full-tx (resolve-tempids db full-tx)]
     (vec (mapcat (fn [tx]
-                   (if (and (vector? tx) (= :nmdt/cas (first tx)))
+                   (if (and (vector? tx) (= :dt/cas (first tx)))
                      (apply cas/cas (into [db] (drop 1 tx)))
                      [tx]))
                  full-tx))))
