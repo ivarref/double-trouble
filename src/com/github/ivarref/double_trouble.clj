@@ -121,6 +121,11 @@
                      [tx]))
                  full-tx))))
 
+(defn already-transacted? [e]
+  (if-let [dat (ex-data (root-cause e))]
+    (= :can-recover (:com.github.ivarref.double-trouble/code dat))
+    false))
+
 ; Borrowed from clojure.core
 (defn ^:private deref-future
   ([^Future fut]

@@ -68,6 +68,8 @@
 (defn pull [e]
   (dissoc (d/pull (d/db *conn*) [:*] e) :db/id))
 
+(defmacro fail [msg]
+  `(is (= 1 0) ~msg))
 
 (deftest test-rejects
   (is (= "Entity cannot be string" (err-msg @(d/transact *conn* [[:dt/cas "string-not-allowed" :e/version nil 1 "some-sha"]]))))
@@ -159,7 +161,7 @@
                        {:e/unique-value "b" :e/version 2}])
   (try
     @(d/transact *conn* [{:e/unique-value "b" :e/version 3}])
-    (is (= 1 0))
+    (fail "Should not get here")
     (catch Exception e
       (is (true?
             (str/starts-with?
@@ -192,8 +194,20 @@
   (is (true? (:transacted? (transact [{:e/id "a" :e/info "2"}
                                       [:dt/cas [:e/id "a"] :e/version 1 2 "sha-2"]]))))
 
-  (is (false? (:transacted? (transact [{:e/id "a" :e/info "2"}
-                                       [:dt/cas [:e/id "a"] :e/version 1 2 "sha-2"]]))))
+  (is (= [#:e{:id "a", :info "2"}
+          [:dt/cas [:e/id "a"] :e/version 1 2 "sha-2"]]
+         (dt/resolve-tempids (d/db *conn*)
+                             [{:e/id "a" :e/info "2"}
+                              [:dt/cas [:e/id "a"] :e/version 1 2 "sha-2"]])))
 
-  (is (= 2 (:v (transact [{:e/id "a" :e/info "2"}
-                          [:dt/cas [:e/id "a"] :e/version 1 2 "sha-2"]])))))
+  (try
+    @(d/transact *conn* [{:e/id "a" :e/info "2"}
+                         [:dt/cas [:e/id "a"] :e/version 1 2 "sha-2"]])
+    (fail "Should not get here")
+    (catch Exception e
+      (if (dt/already-transacted? e)
+        (is (= 1 1))
+        (fail "Should not get here"))))
+
+  #_(is (= 2 (:v (transact [{:e/id "a" :e/info "2"}
+                            [:dt/cas [:e/id "a"] :e/version 1 2 "sha-2"]])))))

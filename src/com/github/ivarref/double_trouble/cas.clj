@@ -64,40 +64,44 @@
   (if-let [e (:db/id (d/pull db [:db/id] lookup-ref))]
     (let [curr-val (get-val db e a)]
       (if (= curr-val old-val)
+        ; cas is fine
         (if (sha-exists? db sha)
           (d/cancel {:cognitect.anomalies/category                 :cognitect.anomalies/incorrect
                      :cognitect.anomalies/message                  (str "SHA already exists! SHA: " sha)
+                     :com.github.ivarref.double-trouble/code       :sha-exists
                      :com.github.ivarref.double-trouble/lookup-ref lookup-ref
                      :com.github.ivarref.double-trouble/sha        sha})
           [[:db/add lookup-ref a new-val]
            [:db/add "datomic.tx" :com.github.ivarref.double-trouble/sha-1 sha]])
-        ; Mismatch between curr-val and old-val, see if old-val was retracted
-        ; as part of sha write...
-        (let [new-val-write (d/q '[:find ?new-val .
-                                   :in $ ?e ?a ?old-val ?sha
-                                   :where
-                                   [?e ?a ?old-val ?tx false]
-                                   [?e ?a ?new-val ?tx true]
-                                   [?tx :com.github.ivarref.double-trouble/sha-1 ?sha ?tx true]]
-                                 (d/history db)
-                                 e
-                                 a
-                                 old-val
-                                 sha)]
-          (if (some? new-val-write)
-            (d/cancel {:cognitect.anomalies/category                    :cognitect.anomalies/conflict
-                       :cognitect.anomalies/message                     "Can recover"
-                       :com.github.ivarref.double-trouble/e             e
-                       :com.github.ivarref.double-trouble/a             a
-                       :com.github.ivarref.double-trouble/old-val       old-val
-                       :com.github.ivarref.double-trouble/new-val       new-val
-                       :com.github.ivarref.double-trouble/new-val-write new-val-write
-                       :com.github.ivarref.double-trouble/sha           sha})
+        ; Cas is not fine. See if values are already written
+        (let [tx-written (d/q '[:find ?tx .
+                                :in $ ?e ?a ?old-val ?new-val ?sha
+                                :where
+                                [?e ?a ?old-val ?tx false]
+                                [?e ?a ?new-val ?tx true]
+                                [?tx :com.github.ivarref.double-trouble/sha-1 ?sha ?tx true]]
+                              (d/history db)
+                              e
+                              a
+                              old-val
+                              new-val
+                              sha)]
+          (if (some? tx-written)
+            (d/cancel {:cognitect.anomalies/category              :cognitect.anomalies/conflict
+                       :cognitect.anomalies/message               "Can recover"
+                       :com.github.ivarref.double-trouble/code    :can-recover
+                       :com.github.ivarref.double-trouble/e       e
+                       :com.github.ivarref.double-trouble/a       a
+                       :com.github.ivarref.double-trouble/old-val old-val
+                       :com.github.ivarref.double-trouble/new-val new-val
+                       :com.github.ivarref.double-trouble/tx      tx-written
+                       :com.github.ivarref.double-trouble/sha     sha})
             #_()))))
 
-    (d/cancel {:cognitect.anomalies/category                         :cognitect.anomalies/incorrect
-               :cognitect.anomalies/message                          "Could not find entity"
-               :com.github.ivarref.no-more-double-trouble/lookup-ref lookup-ref})))
+    (d/cancel {:cognitect.anomalies/category                 :cognitect.anomalies/incorrect
+               :cognitect.anomalies/message                  "Could not find entity"
+               :com.github.ivarref.double-trouble/code       :could-not-find-entity
+               :com.github.ivarref.double-trouble/lookup-ref lookup-ref})))
 
 (defn cas-inner [db e-or-lookup-ref a old-val new-val sha]
   (cond
