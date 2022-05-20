@@ -81,8 +81,8 @@
 (deftest resolve-tempid
   (is (= [[:dt/cas [:e/id "a" :as "tempid"] :e/version nil 1 "some-sha"]
           {:db/id "tempid" :e/id "a" :e/info "1"}]
-         (pp (dt/resolve-tempids (d/db *conn*) [[:dt/cas "tempid" :e/version nil 1 "some-sha"]
-                                                {:db/id "tempid" :e/id "a" :e/info "1"}])))))
+         (dt/resolve-tempids (d/db *conn*) [[:dt/cas "tempid" :e/version nil 1 "some-sha"]
+                                            {:db/id "tempid" :e/id "a" :e/info "1"}]))))
 
 (deftest dt-nil-test
   @(d/transact *conn* [{:e/id "a" :e/info "1"}])
@@ -145,12 +145,12 @@
 
 
 (deftest duplicate-sha
-  @(dt/transact *conn* (dt/sha "hello") [{:db/id "tempid" :e/id "a" :e/info "1"}
-                                         [:nmdt/cas "tempid" :e/version nil 1]])
+  @(dt/transact *conn* [{:db/id "tempid" :e/id "a" :e/info "1"}
+                        [:dt/cas "tempid" :e/version nil 1 "my-sha"]])
   (is (true? (str/starts-with?
-               (err-msg @(dt/transact *conn* (dt/sha "hello") [{:db/id "tempid" :e/id "b" :e/info "2"}
-                                                               [:nmdt/cas "tempid" :e/version nil 1]]))
-               ":db.error/unique-conflict Unique conflict: :com.github.ivarref.no-more-double-trouble/sha-1"))))
+               (err-msg @(dt/transact *conn* [{:db/id "tempid" :e/id "b" :e/info "2"}
+                                              [:dt/cas "tempid" :e/version nil 1 "my-sha"]]))
+               ":db.error/unique-conflict Unique conflict: :com.github.ivarref.double-trouble/sha-1"))))
 
 (deftest cas-unique-conflict-error-ordering
   @(d/transact *conn* [#:db{:ident :e/identity, :cardinality :db.cardinality/one, :valueType :db.type/string :unique :db.unique/identity}
@@ -184,16 +184,16 @@
 
 (deftest transacted?
   (is (true? (:transacted? (transact [{:db/id "tempid", :e/id "a", :e/info "1"}
-                                      [:nmdt/cas "tempid" :e/version nil 1]]))))
+                                      [:dt/cas "tempid" :e/version nil 1 "sha-1"]]))))
 
   (is (false? (:transacted? (transact [{:db/id "tempid", :e/id "a", :e/info "1"}
-                                       [:nmdt/cas "tempid" :e/version nil 1]]))))
+                                       [:dt/cas "tempid" :e/version nil 1 "sha-1"]]))))
 
   (is (true? (:transacted? (transact [{:e/id "a" :e/info "2"}
-                                      [:nmdt/cas [:e/id "a"] :e/version 1 2]]))))
+                                      [:dt/cas [:e/id "a"] :e/version 1 2 "sha-2"]]))))
 
   (is (false? (:transacted? (transact [{:e/id "a" :e/info "2"}
-                                       [:nmdt/cas [:e/id "a"] :e/version 1 2]]))))
+                                       [:dt/cas [:e/id "a"] :e/version 1 2 "sha-2"]]))))
 
   (is (= 2 (:v (transact [{:e/id "a" :e/info "2"}
-                          [:nmdt/cas [:e/id "a"] :e/version 1 2]])))))
+                          [:dt/cas [:e/id "a"] :e/version 1 2 "sha-2"]])))))

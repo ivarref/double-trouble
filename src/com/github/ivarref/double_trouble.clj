@@ -35,7 +35,7 @@
       (when (and (= :db.error/unique-conflict (:db/error m))
                  (string? (:cognitect.anomalies/message m))
                  (str/starts-with? (:cognitect.anomalies/message m)
-                                   "Unique conflict: :com.github.ivarref.no-more-double-trouble/sha-1"))
+                                   "Unique conflict: :com.github.ivarref.double-trouble/sha-1"))
         m))))
 
 (defn return-cas-success-value [db cas-lock sha]
