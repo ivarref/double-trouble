@@ -80,7 +80,7 @@
          (>= (count single) 1)
          (= :dt/cas (first single))
          (not= 6 (count single)))
-    (throw (ex-info ":nmdt/cas requires exactly 6 arguments" {:tx single}))
+    (throw (ex-info ":dt/cas requires exactly 6 arguments" {:tx single}))
 
     (and (vector? single)
          (>= (count single) 1)

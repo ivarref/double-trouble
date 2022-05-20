@@ -198,3 +198,11 @@
 ;    java.lang.Thread.run (Thread.java:833)
 ;Ran 1 test containing 1 assertion.
 ;0 failures, 1 error.
+
+(deftest nil-test
+  @(d/transact *conn* [{:e/id "a" :e/info "1"}])
+  @(d/transact *conn* [[:db/cas [:e/id "a"] :e/version nil 1]]))
+
+(deftest nil-test-2
+  @(d/transact *conn* [{:e/id "a" :e/info "1"}])
+  (is (= ":db.error/cas-failed Compare failed: 2 " (err-msg @(d/transact *conn* [[:db/cas [:e/id "a"] :e/version 2 1]])))))

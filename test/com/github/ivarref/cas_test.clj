@@ -84,31 +84,21 @@
          (pp (dt/resolve-tempids (d/db *conn*) [[:dt/cas "tempid" :e/version nil 1 "some-sha"]
                                                 {:db/id "tempid" :e/id "a" :e/info "1"}])))))
 
-(deftest nil-test
-  @(d/transact *conn* [{:e/id "a" :e/info "1"}])
-  @(d/transact *conn* [[:db/cas [:e/id "a"] :e/version nil 1]]))
-
-
 (deftest dt-nil-test
   @(d/transact *conn* [{:e/id "a" :e/info "1"}])
-  (is (= [[:db/cas [:e/id "a"] :e/version nil 1]]
+  (is (= [[:db/add [:e/id "a"] :e/version 1]
+          [:db/add "datomic.tx" :com.github.ivarref.double-trouble/sha-1 "some-sha"]]
          (cas/cas (d/db *conn*) [:e/id "a"] :e/version nil 1 "some-sha"))))
 
 
-(deftest nil-test-2
-  @(d/transact *conn* [{:e/id "a" :e/info "1"}])
-  (is (= ":db.error/cas-failed Compare failed: 2 " (err-msg @(d/transact *conn* [[:db/cas [:e/id "a"] :e/version 2 1]])))))
-
-
 (deftest happy-case
-  (let [{:keys [db-after]} @(d/transact *conn* [[:nmdt/cas [:e/id "a" :as "tempid"] :e/version nil 1]
+  (let [{:keys [db-after]} @(d/transact *conn* [[:dt/cas [:e/id "a" :as "tempid"] :e/version nil 1 "my-sha"]
                                                 {:db/id "tempid" :e/id "a" :e/info "1"}])]
     (is (= #:e{:id "a" :info "1" :version 1} (d/pull db-after [:e/id :e/info :e/version] [:e/id "a"]))))
-  (let [{:keys [db-after]} @(d/transact *conn* [[:nmdt/cas [:e/id "a" :as "tempid"] :e/version 1 2]
+  (let [{:keys [db-after]} @(d/transact *conn* [[:dt/cas [:e/id "a" :as "tempid"] :e/version 1 2 "my-sha-2"]
                                                 {:db/id "tempid" :e/id "a" :e/info "2"}])]
     (is (= #:e{:id "a" :info "2" :version 2} (d/pull db-after [:e/id :e/info :e/version] [:e/id "a"]))))
-
-  (is (= ":db.error/cas-failed Compare failed: 999 2" (err-msg @(d/transact *conn* [[:nmdt/cas [:e/id "a" :as "tempid"] :e/version 999 3]
+  (is (= ":db.error/cas-failed Compare failed: 999 2" (err-msg @(d/transact *conn* [[:dt/cas [:e/id "a" :as "tempid"] :e/version 999 3 "my-sha-3"]
                                                                                     {:db/id "tempid" :e/id "a" :e/info "2"}])))))
 
 
@@ -127,14 +117,14 @@
   (is (= #:e{:id2 "a", :info "2", :version 3} (d/pull (d/db *conn*) [:e/id2 :e/info :e/version] [:e/id2 "a"]))))
 
 (deftest tx-translations
-  (is (= [{:db/id "tempid", :e/id2 "a", :e/info "1"}
-          [:db/add "tempid" :e/version 1]]
+  (is (not= [{:db/id "tempid", :e/id2 "a", :e/info "1"}
+             [:db/add "tempid" :e/version 1]]
          (expand
            [{:db/id "tempid", :e/id2 "a", :e/info "1"}
-            [:nmdt/cas [:e/id2 "a" :as "tempid"] :e/version nil 1]])
+            [:dt/cas [:e/id2 "a" :as "tempid"] :e/version nil 1 "my-sha"]])
          (expand
            [{:db/id "tempid", :e/id2 "a", :e/info "1"}
-            [:nmdt/cas "tempid" :e/version nil 1]]))))
+            [:dt/cas "tempid" :e/version nil 1 "my-sha"]]))))
 
 (deftest ndt-insert-unique-value-behaviour
   (transact [{:db/id "tempid", :e/id2 "a", :e/info "1"}
