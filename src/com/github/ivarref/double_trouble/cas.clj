@@ -66,20 +66,38 @@
     [[:db/add lookup-ref a new-val]
      [:db/add "datomic.tx" :com.github.ivarref.double-trouble/sha-1 sha]]))
 
-(defn cas-mismatch [db e a old-val new-val sha]
-  ; Cas is not fine. See if values are already written
-  (let [tx-written (d/q '[:find ?tx .
-                          :in $ ?e ?a ?old-val ?new-val ?sha
+(defn already-written?->tx [db e a old-val new-val sha]
+  (if (some? old-val)
+    (d/q '[:find ?tx .
+           :in $ ?e ?a ?old-val ?new-val ?sha
+           :where
+           [?e ?a ?old-val ?tx false]
+           [?e ?a ?new-val ?tx true]
+           [?tx :com.github.ivarref.double-trouble/sha-1 ?sha ?tx true]]
+         (d/history db)
+         e
+         a
+         old-val
+         new-val
+         sha)
+    (let [tx-write (d/q '[:find [?tx ?op]
+                          :in $ ?e ?a ?new-val ?sha
                           :where
-                          [?e ?a ?old-val ?tx false]
-                          [?e ?a ?new-val ?tx true]
+                          [?e ?a ?new-val ?tx ?op]
                           [?tx :com.github.ivarref.double-trouble/sha-1 ?sha ?tx true]]
                         (d/history db)
                         e
                         a
-                        old-val
                         new-val
                         sha)]
+      (if (and (= 2 (count tx-write))
+               (true? (last tx-write)))
+        (first tx-write)
+        nil))))
+
+(defn cas-mismatch [db e a old-val new-val sha]
+  ; Cas is not fine. See if values are already written
+  (let [tx-written (already-written?->tx db e a old-val new-val sha)]
     (if (some? tx-written)
       (d/cancel {:cognitect.anomalies/category              :cognitect.anomalies/conflict
                  :cognitect.anomalies/message               "Can recover"
@@ -140,9 +158,7 @@
     (let [e (vec (take 2 e-or-lookup-ref))]
       (cond
         (some? (:db/id (d/pull db [:db/id] e)))
-        (do
-          (println "expand regular...")
-          (cas-inner-2 db e a old-val new-val sha))
+        (cas-inner-2 db e a old-val new-val sha)
 
         (nil? old-val)
         [[:db/add (last e-or-lookup-ref) a new-val]

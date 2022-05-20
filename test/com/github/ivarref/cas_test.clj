@@ -100,8 +100,8 @@
   (let [{:keys [db-after]} @(d/transact *conn* [[:dt/cas [:e/id "a" :as "tempid"] :e/version 1 2 "my-sha-2"]
                                                 {:db/id "tempid" :e/id "a" :e/info "2"}])]
     (is (= #:e{:id "a" :info "2" :version 2} (d/pull db-after [:e/id :e/info :e/version] [:e/id "a"]))))
-  (is (= ":db.error/cas-failed Compare failed: 999 2" (err-msg @(d/transact *conn* [[:dt/cas [:e/id "a" :as "tempid"] :e/version 999 3 "my-sha-3"]
-                                                                                    {:db/id "tempid" :e/id "a" :e/info "2"}])))))
+  (is (= "Cas failure" (err-msg @(d/transact *conn* [[:dt/cas [:e/id "a" :as "tempid"] :e/version 999 3 "my-sha-3"]
+                                                     {:db/id "tempid" :e/id "a" :e/info "2"}])))))
 
 
 (deftest datomic-insert-unique-value-behaviour
@@ -185,24 +185,27 @@
 (defn dry-cas [args]
   (apply cas/cas (into [(d/db *conn*)] (drop 1 args))))
 
-(deftest transacted?
+(deftest initial-duplicate-is-fine
   @(d/transact *conn*
                (dt/resolve-tempids (d/db *conn*)
                                    [{:db/id "tempid", :e/id "a", :e/info "1"}
                                     [:dt/cas "tempid" :e/version nil 1 "sha-1"]]))
-  (println "so far so good")
-
+  (is (some? (cas/already-written?->tx
+               (d/db *conn*)
+               [:e/id "a"]
+               :e/version
+               nil
+               1
+               "sha-1")))
   (try
-    (b)
-    (pp (dry-cas [:dt/cas [:e/id "a" :as "tempid"] :e/version nil 1 "sha-1"]))
-    #_@(d/transact *conn*
-                   (dt/resolve-tempids (d/db *conn*)
-                                       [{:db/id "tempid", :e/id "a", :e/info "1"}
-                                        [:dt/cas "tempid" :e/version nil 1 "sha-1"]]))
+    @(d/transact *conn*
+                 (dt/resolve-tempids (d/db *conn*)
+                                     [{:db/id "tempid", :e/id "a", :e/info "1"}
+                                      [:dt/cas "tempid" :e/version nil 1 "sha-1"]]))
     (fail "Should not get here")
     (catch Exception e
       (is (= :can-recover (dt/error-code e)))
-      (throw e)))
+      #_(throw e)))
 
   #_(is (true? (:transacted? (transact [{:e/id "a" :e/info "2"}
                                         [:dt/cas [:e/id "a"] :e/version 1 2 "sha-2"]]))))
