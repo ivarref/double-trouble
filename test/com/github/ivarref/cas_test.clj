@@ -182,38 +182,50 @@
       (is (= tempids (:tempids (transact [{:db/id "tempid", :e/id "a", :e/info "1"}
                                           [:nmdt/cas "tempid" :e/version nil 1]]))))))
 
-(deftest transacted?
-  (is (true? (:transacted? (transact [{:db/id "tempid", :e/id "a", :e/info "1"}
-                                      [:dt/cas "tempid" :e/version nil 1 "sha-1"]]))))
-
-  (is (false? (:transacted? (transact [{:db/id "tempid", :e/id "a", :e/info "1"}
-                                       [:dt/cas "tempid" :e/version nil 1 "sha-1"]]))))
-
-  (is (true? (:transacted? (transact [{:e/id "a" :e/info "2"}
-                                      [:dt/cas [:e/id "a"] :e/version 1 2 "sha-2"]]))))
-
-  (is (= [#:e{:id "a", :info "2"}
-          [:dt/cas [:e/id "a"] :e/version 1 2 "sha-2"]]
-         (dt/resolve-tempids (d/db *conn*)
-                             [{:e/id "a" :e/info "2"}
-                              [:dt/cas [:e/id "a"] :e/version 1 2 "sha-2"]])))
-
-  (try
-    @(d/transact *conn* [{:e/id "a" :e/info "2"}
-                         [:dt/cas [:e/id "a"] :e/version 1 2 "sha-2"]])
-    (fail "Should not get here")
-    (catch Exception e
-      (is (true? (dt/already-transacted? e)))))
-
-  (try
-    @(d/transact *conn* [[:dt/cas [:e/id "a"] :e/version 222 3 "sha-3"]])
-    (fail "Should not get here")
-    (catch Exception e
-      (is (= :cas-failure (dt/error-code e)))
-      (is (false? (dt/already-transacted? e))))))
-
 (defn dry-cas [args]
   (apply cas/cas (into [(d/db *conn*)] (drop 1 args))))
+
+(deftest transacted?
+  @(d/transact *conn*
+               (dt/resolve-tempids (d/db *conn*)
+                                   [{:db/id "tempid", :e/id "a", :e/info "1"}
+                                    [:dt/cas "tempid" :e/version nil 1 "sha-1"]]))
+  (println "so far so good")
+
+  (try
+    (b)
+    (pp (dry-cas [:dt/cas [:e/id "a" :as "tempid"] :e/version nil 1 "sha-1"]))
+    #_@(d/transact *conn*
+                   (dt/resolve-tempids (d/db *conn*)
+                                       [{:db/id "tempid", :e/id "a", :e/info "1"}
+                                        [:dt/cas "tempid" :e/version nil 1 "sha-1"]]))
+    (fail "Should not get here")
+    (catch Exception e
+      (is (= :can-recover (dt/error-code e)))
+      (throw e)))
+
+  #_(is (true? (:transacted? (transact [{:e/id "a" :e/info "2"}
+                                        [:dt/cas [:e/id "a"] :e/version 1 2 "sha-2"]]))))
+
+  #_(is (= [#:e{:id "a", :info "2"}
+            [:dt/cas [:e/id "a"] :e/version 1 2 "sha-2"]]
+           (dt/resolve-tempids (d/db *conn*)
+                               [{:e/id "a" :e/info "2"}
+                                [:dt/cas [:e/id "a"] :e/version 1 2 "sha-2"]])))
+
+  #_(try
+      @(d/transact *conn* [{:e/id "a" :e/info "2"}
+                           [:dt/cas [:e/id "a"] :e/version 1 2 "sha-2"]])
+      (fail "Should not get here")
+      (catch Exception e
+        (is (true? (dt/already-transacted? e)))))
+
+  #_(try
+      @(d/transact *conn* [[:dt/cas [:e/id "a"] :e/version 222 3 "sha-3"]])
+      (fail "Should not get here")
+      (catch Exception e
+        (is (= :cas-failure (dt/error-code e)))
+        (is (false? (dt/already-transacted? e))))))
 
 (deftest transact-bad-cas
   @(d/transact *conn* [{:e/id "a" :db/id "tempid"}
