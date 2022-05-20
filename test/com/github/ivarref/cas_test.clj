@@ -63,7 +63,10 @@
   (dt/expand-tx (d/db *conn*) x))
 
 (defn transact [x]
-  @(dt/transact *conn* x))
+  @(d/transact *conn* x))
+
+(defn resolve-tempids [x]
+  (dt/resolve-tempids (d/db *conn*) x))
 
 (defn pull [e]
   (dissoc (d/pull (d/db *conn*) [:*] e) :db/id))
@@ -130,13 +133,13 @@
             [:dt/cas "tempid" :e/version nil 1 "my-sha"]]))))
 
 (deftest ndt-insert-unique-value-behaviour
-  (transact [{:db/id "tempid", :e/id2 "a", :e/info "1"}
-             [:dt/cas "tempid" :e/version nil 1 "my-sha"]])
+  (transact (resolve-tempids [{:db/id "tempid", :e/id2 "a", :e/info "1"}
+                              [:dt/cas "tempid" :e/version nil 1 "my-sha"]]))
   (is (= #:e{:id2 "a", :info "1", :version 1} (pull [:e/id2 "a"])))
 
   (is (= "Cannot use tempid for existing :db.unique/value entities"
-         (err-msg (transact [{:db/id "tempid", :e/id2 "a", :e/info "1"}
-                             [:dt/cas "tempid" :e/version nil 1 "my-sha"]]))))
+         (err-msg (transact (resolve-tempids [{:db/id "tempid", :e/id2 "a", :e/info "1"}
+                                              [:dt/cas "tempid" :e/version nil 1 "my-sha"]])))))
 
   (transact [[:dt/cas [:e/id2 "a"] :e/version 1 2 "my-sha-2"]])
   (is (= #:e{:id2 "a", :info "1", :version 2} (pull [:e/id2 "a"])))
@@ -147,11 +150,11 @@
 
 
 (deftest duplicate-sha
-  @(dt/transact *conn* [{:db/id "tempid" :e/id "a" :e/info "1"}
-                        [:dt/cas "tempid" :e/version nil 1 "my-sha"]])
+  @(d/transact *conn* (resolve-tempids [{:db/id "tempid" :e/id "a" :e/info "1"}
+                                        [:dt/cas "tempid" :e/version nil 1 "my-sha"]]))
   (is (true? (str/starts-with?
-               (err-msg @(dt/transact *conn* [{:db/id "tempid" :e/id "b" :e/info "2"}
-                                              [:dt/cas "tempid" :e/version nil 1 "my-sha"]]))
+               (err-msg @(d/transact *conn* (resolve-tempids [{:db/id "tempid" :e/id "b" :e/info "2"}
+                                                              [:dt/cas "tempid" :e/version nil 1 "my-sha"]])))
                ":db.error/unique-conflict Unique conflict: :com.github.ivarref.double-trouble/sha-1"))))
 
 (deftest cas-unique-conflict-error-ordering
@@ -205,7 +208,7 @@
     (fail "Should not get here")
     (catch Exception e
       (is (= :can-recover (dt/error-code e)))
-      #_(throw e)))
+      (is (true? (dt/already-transacted? e)))))
 
   #_(is (true? (:transacted? (transact [{:e/id "a" :e/info "2"}
                                         [:dt/cas [:e/id "a"] :e/version 1 2 "sha-2"]]))))
