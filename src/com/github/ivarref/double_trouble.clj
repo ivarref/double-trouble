@@ -1,11 +1,11 @@
 (ns com.github.ivarref.double-trouble
-  (:require [com.github.ivarref.double-trouble.sha :as sha]
+  (:require [clojure.string :as str]
             [com.github.ivarref.double-trouble.cas :as cas]
             [com.github.ivarref.double-trouble.generated :as gen]
-            [datomic.api :as d]
-            [clojure.string :as str])
-  (:import (datomic Connection)
-           (clojure.lang IDeref IBlockingDeref IPending)
+            [com.github.ivarref.double-trouble.sha :as sha]
+            [datomic.api :as d])
+  (:import (clojure.lang IBlockingDeref IDeref IPending)
+           (datomic Connection)
            (java.util.concurrent Future TimeUnit TimeoutException)))
 
 (def schema
