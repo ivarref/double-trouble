@@ -130,56 +130,54 @@
         (catch TimeoutException _
           timeout-val))))
 
-(defmacro handle-cas [conn a new-v cas-op sha get-res]
-  `(try
-     (let [res# ~get-res]
-       (assoc res# :v ~new-v :transacted? true))
-     (catch Exception exception#
-       (cond
-         (sha-unique-failure exception#)
-         (throw (ex-info "SHA already asserted" {:sha sha} exception#))
+(defmacro handle-cas [conn a new-v cas-op get-res]
+  `(let [sha# (last ~cas-op)]
+     (try
+       (let [res# ~get-res]
+         (assoc res# :v ~new-v :transacted? true))
+       (catch Exception exception#
+         (cond
+           (sha-unique-failure exception#)
+           (throw (ex-info "SHA already asserted" {:sha sha#} exception#))
 
-         (cas-failure-for-attr exception# ~a)
-         (or (return-cas-success-value (d/db ~conn) ~cas-op ~sha)
-             (throw exception#))
+           (cas-failure-for-attr exception# ~a)
+           (or (return-cas-success-value (d/db ~conn) ~cas-op sha#)
+               (throw exception#))
 
-         :else
-         (throw exception#)))))
+           :else
+           (throw exception#))))))
 
-(defn transact [conn sha tx]
+(defn transact [conn tx]
   (assert (instance? Connection conn) "conn must be an instance of datomic.Connection")
-  (assert (and (string? sha) (= 40 (count sha))) "sha must be a string of length 40")
+  #_(assert (and (string? sha) (= 40 (count sha))) "sha must be a string of length 40")
   (assert (vector? tx) "tx must be a vector")
   (let [tx (resolve-tempids (d/db conn) tx)
         cas-op (->> tx
                     (filter vector?)
                     (filter not-empty)
-                    (filter #(= :nmdt/cas (first %)))
+                    (filter #(= :dt/cas (first %)))
                     (first))
         _ (when (nil? cas-op)
-            (throw (ex-info "Transaction must contain :nmdt/cas operation" {:tx tx :sha sha})))
+            (throw (ex-info "Transaction must contain :dt/cas operation" {:tx tx})))
         [op e a old-v new-v] cas-op]
-    (assert (= 5 (count cas-op)) "tx must be a :nmdt/cas operation")
+    (assert (= 6 (count cas-op)) "tx must be a :dt/cas operation")
     (assert (keyword? a) ":a must be a keyword")
     (assert (some? new-v) ":v must be some?")
-    (let [full-tx (vec (shuffle (into [{:db/id                                   "datomic.tx"
-                                        :com.github.ivarref.double-trouble/sha-1 sha}]
-                                      tx)))
-          fut (d/transact conn full-tx)]
+    (let [fut (d/transact conn tx)]
       (reify
         IDeref
         (deref [_]
-          (handle-cas conn a new-v cas-op sha (deref-future fut)))
+          (handle-cas conn a new-v cas-op (deref-future fut)))
         IBlockingDeref
         (deref [_ timeout-ms timeout-val]
-          (handle-cas conn a new-v cas-op sha (deref-future fut timeout-ms timeout-val)))
+          (handle-cas conn a new-v cas-op (deref-future fut timeout-ms timeout-val)))
         IPending
         (isRealized [_] (.isDone fut))
         Future
         (get [_]
-          (handle-cas conn a new-v cas-op sha (.get fut)))
+          (handle-cas conn a new-v cas-op (.get fut)))
         (get [_ timeout unit]
-          (handle-cas conn a new-v cas-op sha (.get fut timeout unit)))
+          (handle-cas conn a new-v cas-op (.get fut timeout unit)))
         (isCancelled [_] (.isCancelled fut))
         (isDone [_] (.isDone fut))
         (cancel [_ interrupt?] (.cancel fut interrupt?))))))

@@ -63,7 +63,7 @@
   (dt/expand-tx (d/db *conn*) x))
 
 (defn transact [x]
-  @(dt/transact *conn* (dt/sha x) x))
+  @(dt/transact *conn* x))
 
 (defn pull [e]
   (dissoc (d/pull (d/db *conn*) [:*] e) :db/id))
@@ -117,8 +117,9 @@
   (is (= #:e{:id2 "a", :info "2", :version 3} (d/pull (d/db *conn*) [:e/id2 :e/info :e/version] [:e/id2 "a"]))))
 
 (deftest tx-translations
-  (is (not= [{:db/id "tempid", :e/id2 "a", :e/info "1"}
-             [:db/add "tempid" :e/version 1]]
+  (is (= [{:db/id "tempid", :e/id2 "a", :e/info "1"}
+          [:db/add "tempid" :e/version 1]
+          [:db/add "datomic.tx" :com.github.ivarref.double-trouble/sha-1 "my-sha"]]
          (expand
            [{:db/id "tempid", :e/id2 "a", :e/info "1"}
             [:dt/cas [:e/id2 "a" :as "tempid"] :e/version nil 1 "my-sha"]])
@@ -128,18 +129,18 @@
 
 (deftest ndt-insert-unique-value-behaviour
   (transact [{:db/id "tempid", :e/id2 "a", :e/info "1"}
-             [:nmdt/cas "tempid" :e/version nil 1]])
+             [:dt/cas "tempid" :e/version nil 1 "my-sha"]])
   (is (= #:e{:id2 "a", :info "1", :version 1} (pull [:e/id2 "a"])))
 
   (is (= "Cannot use tempid for existing :db.unique/value entities"
          (err-msg (transact [{:db/id "tempid", :e/id2 "a", :e/info "1"}
-                             [:nmdt/cas "tempid" :e/version nil 1]]))))
+                             [:dt/cas "tempid" :e/version nil 1 "my-sha"]]))))
 
-  (transact [[:nmdt/cas [:e/id2 "a"] :e/version 1 2]])
+  (transact [[:dt/cas [:e/id2 "a"] :e/version 1 2 "my-sha-2"]])
   (is (= #:e{:id2 "a", :info "1", :version 2} (pull [:e/id2 "a"])))
 
   (transact [{:db/id [:e/id2 "a"] :e/info "2"}
-             [:nmdt/cas [:e/id2 "a"] :e/version 2 3]])
+             [:dt/cas [:e/id2 "a"] :e/version 2 3 "my-sha-3"]])
   (is (= #:e{:id2 "a", :info "2", :version 3} (pull [:e/id2 "a"]))))
 
 

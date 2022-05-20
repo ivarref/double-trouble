@@ -125,10 +125,12 @@
     (let [e (vec (take 2 e-or-lookup-ref))]
       (cond
         (some? (:db/id (d/pull db [:db/id] e)))
-        [[:db/cas e a old-val new-val]]
+        [[:db/cas e a old-val new-val]
+         [:db/add "datomic.tx" :com.github.ivarref.double-trouble/sha-1 sha]]
 
         (nil? old-val)
-        [[:db/add (last e-or-lookup-ref) a new-val]]
+        [[:db/add (last e-or-lookup-ref) a new-val]
+         [:db/add "datomic.tx" :com.github.ivarref.double-trouble/sha-1 sha]]
 
         :else
         (d/cancel {:cognitect.anomalies/category :cognitect.anomalies/incorrect
