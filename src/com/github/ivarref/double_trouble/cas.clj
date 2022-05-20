@@ -56,6 +56,49 @@
               db
               sha)))
 
+(defn cas-ok [db lookup-ref a new-val sha]
+  (if (sha-exists? db sha)
+    (d/cancel {:cognitect.anomalies/category                 :cognitect.anomalies/incorrect
+               :cognitect.anomalies/message                  (str "SHA already exists! SHA: " sha)
+               :com.github.ivarref.double-trouble/code       :sha-exists
+               :com.github.ivarref.double-trouble/lookup-ref lookup-ref
+               :com.github.ivarref.double-trouble/sha        sha})
+    [[:db/add lookup-ref a new-val]
+     [:db/add "datomic.tx" :com.github.ivarref.double-trouble/sha-1 sha]]))
+
+(defn cas-mismatch [db e a old-val new-val sha]
+  ; Cas is not fine. See if values are already written
+  (let [tx-written (d/q '[:find ?tx .
+                          :in $ ?e ?a ?old-val ?new-val ?sha
+                          :where
+                          [?e ?a ?old-val ?tx false]
+                          [?e ?a ?new-val ?tx true]
+                          [?tx :com.github.ivarref.double-trouble/sha-1 ?sha ?tx true]]
+                        (d/history db)
+                        e
+                        a
+                        old-val
+                        new-val
+                        sha)]
+    (if (some? tx-written)
+      (d/cancel {:cognitect.anomalies/category              :cognitect.anomalies/conflict
+                 :cognitect.anomalies/message               "Can recover"
+                 :com.github.ivarref.double-trouble/code    :can-recover
+                 :com.github.ivarref.double-trouble/e       e
+                 :com.github.ivarref.double-trouble/a       a
+                 :com.github.ivarref.double-trouble/old-val old-val
+                 :com.github.ivarref.double-trouble/new-val new-val
+                 :com.github.ivarref.double-trouble/tx      tx-written
+                 :com.github.ivarref.double-trouble/sha     sha})
+      (d/cancel {:cognitect.anomalies/category              :cognitect.anomalies/conflict
+                 :cognitect.anomalies/message               "Cas failure"
+                 :com.github.ivarref.double-trouble/code    :cas-failure
+                 :com.github.ivarref.double-trouble/e       e
+                 :com.github.ivarref.double-trouble/a       a
+                 :com.github.ivarref.double-trouble/old-val old-val
+                 :com.github.ivarref.double-trouble/new-val new-val
+                 :com.github.ivarref.double-trouble/sha     sha}))))
+
 (defn cas-inner-2 [db lookup-ref
                    a
                    old-val
@@ -64,40 +107,8 @@
   (if-let [e (:db/id (d/pull db [:db/id] lookup-ref))]
     (let [curr-val (get-val db e a)]
       (if (= curr-val old-val)
-        ; cas is fine
-        (if (sha-exists? db sha)
-          (d/cancel {:cognitect.anomalies/category                 :cognitect.anomalies/incorrect
-                     :cognitect.anomalies/message                  (str "SHA already exists! SHA: " sha)
-                     :com.github.ivarref.double-trouble/code       :sha-exists
-                     :com.github.ivarref.double-trouble/lookup-ref lookup-ref
-                     :com.github.ivarref.double-trouble/sha        sha})
-          [[:db/add lookup-ref a new-val]
-           [:db/add "datomic.tx" :com.github.ivarref.double-trouble/sha-1 sha]])
-        ; Cas is not fine. See if values are already written
-        (let [tx-written (d/q '[:find ?tx .
-                                :in $ ?e ?a ?old-val ?new-val ?sha
-                                :where
-                                [?e ?a ?old-val ?tx false]
-                                [?e ?a ?new-val ?tx true]
-                                [?tx :com.github.ivarref.double-trouble/sha-1 ?sha ?tx true]]
-                              (d/history db)
-                              e
-                              a
-                              old-val
-                              new-val
-                              sha)]
-          (if (some? tx-written)
-            (d/cancel {:cognitect.anomalies/category              :cognitect.anomalies/conflict
-                       :cognitect.anomalies/message               "Can recover"
-                       :com.github.ivarref.double-trouble/code    :can-recover
-                       :com.github.ivarref.double-trouble/e       e
-                       :com.github.ivarref.double-trouble/a       a
-                       :com.github.ivarref.double-trouble/old-val old-val
-                       :com.github.ivarref.double-trouble/new-val new-val
-                       :com.github.ivarref.double-trouble/tx      tx-written
-                       :com.github.ivarref.double-trouble/sha     sha})
-            #_()))))
-
+        (cas-ok db lookup-ref a new-val sha)
+        (cas-mismatch db e a old-val new-val sha)))
     (d/cancel {:cognitect.anomalies/category                 :cognitect.anomalies/incorrect
                :cognitect.anomalies/message                  "Could not find entity"
                :com.github.ivarref.double-trouble/code       :could-not-find-entity
