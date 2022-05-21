@@ -7,6 +7,8 @@
            (datomic Connection)
            (java.util.concurrent Future TimeUnit TimeoutException)))
 
+(defonce healthy? (atom true))
+
 (def schema
   (into
     [#:db{:ident :com.github.ivarref.double-trouble/sha-1 :cardinality :db.cardinality/one :valueType :db.type/string :unique :db.unique/value}]
@@ -66,6 +68,9 @@
 (defn already-transacted? [e]
   (= :already-transacted (error-code e)))
 
+(defn duplicate-sha? [e]
+  (= :sha-exists (error-code e)))
+
 (defn return-already-transacted [conn e]
   (let [{:com.github.ivarref.double-trouble/keys [tx]} (ex-data (root-cause e))]
     {:transacted? false
@@ -79,7 +84,10 @@
      (catch Exception exception#
        (if (already-transacted? exception#)
          (return-already-transacted ~conn exception#)
-         (throw exception#)))))
+         (do
+           (when (duplicate-sha? exception#)
+             (reset! healthy? false))
+           (throw exception#))))))
 
 ; Borrowed from clojure.core
 (defn ^:private deref-future

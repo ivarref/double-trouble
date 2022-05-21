@@ -173,7 +173,7 @@ has occurred).
 
 `com.github.ivarref.double-trouble/transact` does not return
 `tempids` nor `tx-data` for duplicate transactions. For regular
-transactions it `dissoc`s those keys so that you do not mistakenly
+transactions it removes those keys so that you do not mistakenly
 rely on them when using this library ¯\\\_(ツ)\_/¯.
 
 ## Related
