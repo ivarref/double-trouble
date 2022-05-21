@@ -1,7 +1,7 @@
 # <img align="right" src="the_clash.png" width="187" height="200"> [No more] double trouble
 
 Handle duplicate Datomic transactions with ease.
-A modified compare-and-swap function that handles for duplicates.
+A modified compare-and-swap (cas) function that handles duplicates.
 
 ## Installation
 
@@ -38,13 +38,6 @@ A modified compare-and-swap function that handles for duplicates.
                     [:dt/cas [:e/id "my-id"] :e/version 1 2 (dt/sha payload)]])
 ; => {:db-before datomic.db.Db@a108c315
 ;     :db-after datomic.db.Db@260c18eb
-;     :tx-data [#datom[13194139534317 50 #inst"2022-05-21T14:57:18.466-00:00" 13194139534317 true]
-;               #datom[17592186045420 75 "Second version" 13194139534317 true]
-;               #datom[17592186045420 75 "Initial version" 13194139534317 false]
-;               #datom[17592186045420 74 2 13194139534317 true]
-;               #datom[17592186045420 74 1 13194139534317 false]
-;               #datom[13194139534317 72 "ab25e167099299b1d813c9bab401be1ca15b64e1" 13194139534317 true]],
-;     :tempids {-9223301668109598104 17592186045420, "datomic.tx" 13194139534317},
 ;     :transacted? true}
 ; Notice the key :transacted? with value true
 
@@ -57,7 +50,7 @@ A modified compare-and-swap function that handles for duplicates.
 ; Notice the key :transacted? with value false
 
 ; Why did the above succeed?
-; :dt/cas detected that:
+; :dt/cas detected that
 ; :e/version 1 -> 2 had already been asserted in a previous transaction and
 ; that the sha asserted in that previous transaction matched the sha
 ; in the current transaction.
@@ -103,8 +96,9 @@ occurs after a transaction has successfully completed:
 ```
 
 The aim of this library is to handle such scenarios.
+
 Had `:dt/cas` (and not `:db/cas`) been used, the retry would have
-been successful. 
+been successful.
 
 ## Usage
 
@@ -123,3 +117,43 @@ the event of a cas failure, i.e. if this transaction has a duplicate.
 
 You may use `(dt/sha payload)` to generate a sha. `my-data` must obviously
 be identical for transactions that should be considered identical.
+`dt/sha` converts maps and sets into their sorted forms before
+calculating the sha.
+
+You may use `com.github.ivarref.double-trouble/transact` to transact data
+containing `:dt/cas`. It will catch exceptions, return success in the
+case of a duplicate transaction, or re-throw other exceptions.
+It will also resolve tempids on the input tx-data.
+
+If you prefer handling the exception yourself, you may do it as the following:
+```clojure
+(require '[com.github.ivarref.double-trouble :as dt])
+(require '[datomic.api :as d])
+
+(try
+  @(d/transact conn [(dissoc payload :e/version)
+                     [:dt/cas [:e/id "my-id"] :e/version 1 2 (dt/sha payload)]])
+  (catch Exception e
+    (if (dt/already-transacted? e)
+      :ok
+      '...handle-exception...)))
+```
+
+## Limitations
+
+`com.github.ivarref.double-trouble/transact` does not return
+`tempids` nor `tx-data` for duplicate transactions. For regular
+transactions it `dissoc`s those keys so that you do not mistakenly
+rely on them when using this library ¯\\\_(ツ)\_/¯.
+
+## Related
+
+...
+
+## License
+
+Copyright © 2022 Ivar Refsdal
+
+This program and the accompanying materials are made available under the terms of the Eclipse Public License 2.0 which is available at http://www.eclipse.org/legal/epl-2.0.
+
+This Source Code may also be made available under the following Secondary Licenses when the conditions for such availability set forth in the Eclipse Public License, v. 2.0 are satisfied: GNU General Public License as published by the Free Software Foundation, either version 2 of the License, or (at your option) any later version, with the GNU Classpath Exception which is available at https://www.gnu.org/software/classpath/license.html.

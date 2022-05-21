@@ -58,3 +58,13 @@
 ; catches this particular exception, and returns a result as if the
 ; transaction had succeeded: a map with the keys :db-before, :db-after and
 ; :transacted? (false).
+
+(try
+  @(d/transact conn [(dissoc payload :e/version)
+                     [:dt/cas [:e/id "my-id"] :e/version 1 2 (dt/sha payload)]])
+  (catch Exception e
+    (if (dt/already-transacted? e)
+      :ok
+      '...handle-exception...)))
+
+
