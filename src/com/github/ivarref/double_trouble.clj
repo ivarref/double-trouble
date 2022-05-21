@@ -66,15 +66,6 @@
 (defn already-transacted? [e]
   (= :already-transacted (error-code e)))
 
-; Borrowed from clojure.core
-(defn ^:private deref-future
-  ([^Future fut]
-   (.get fut))
-  ([^Future fut timeout-ms timeout-val]
-   (try (.get fut timeout-ms TimeUnit/MILLISECONDS)
-        (catch TimeoutException _
-          timeout-val))))
-
 (defn return-already-transacted [conn e]
   (let [{:com.github.ivarref.double-trouble/keys [tx]} (ex-data (root-cause e))]
     {:tx-data []
@@ -92,6 +83,15 @@
        (if (already-transacted? exception#)
          (return-already-transacted ~conn exception#)
          (throw exception#)))))
+
+; Borrowed from clojure.core
+(defn ^:private deref-future
+  ([^Future fut]
+   (.get fut))
+  ([^Future fut timeout-ms timeout-val]
+   (try (.get fut timeout-ms TimeUnit/MILLISECONDS)
+        (catch TimeoutException _
+          timeout-val))))
 
 (defn transact [conn tx]
   (assert (instance? Connection conn) "conn must be an instance of datomic.Connection")

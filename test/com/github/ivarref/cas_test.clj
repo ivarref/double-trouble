@@ -3,13 +3,13 @@
             [clojure.string :as str]
             [clojure.test :refer [deftest is use-fixtures]]
             [clojure.tools.logging :as log]
-            [com.github.ivarref.debug]
             [com.github.ivarref.double-trouble :as dt]
             [com.github.ivarref.double-trouble.cas :as cas]
             [com.github.ivarref.gen-fn :as gen-fn]
             [com.github.ivarref.log-init :as log-init]
             [com.github.ivarref.stacktrace]
-            [datomic.api :as d]))
+            [datomic.api :as d]
+            [com.github.ivarref.debug]))
 
 (log-init/init-logging!
   [[#{"datomic.*" "com.datomic.*" "org.apache.*"} :warn]
