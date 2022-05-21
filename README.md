@@ -20,6 +20,7 @@ A modified compare-and-swap (cas) function that handles duplicates.
 
 ; Setup:
 @(d/transact conn dt/schema)
+
 (def example-schema
   [#:db{:ident :e/id, :cardinality :db.cardinality/one, :valueType :db.type/string :unique :db.unique/identity}
    #:db{:ident :e/version, :cardinality :db.cardinality/one, :valueType :db.type/long}
