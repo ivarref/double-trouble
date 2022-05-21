@@ -60,16 +60,6 @@
   (mapv (partial resolve-tempid db tx) tx))
 
 
-(defn expand-tx [db full-tx]
-  (let [full-tx (resolve-tempids db full-tx)]
-    (vec (mapcat (fn [tx]
-                   (if (and (vector? tx) (= :dt/cas (first tx)))
-                     (apply cas/cas (into [db] (drop 1 tx)))
-                     [tx]))
-                 full-tx))))
-
-
-
 (defn error-code [e]
   (when-let [dat (ex-data (root-cause e))]
     (get dat :com.github.ivarref.double-trouble/code)))

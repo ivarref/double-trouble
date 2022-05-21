@@ -60,7 +60,13 @@
        (ex-message (root-cause e#)))))
 
 (defn expand [x]
-  (dt/expand-tx (d/db *conn*) x))
+  (let [db (d/db *conn*)
+        full-tx (dt/resolve-tempids db x)]
+    (vec (mapcat (fn [tx]
+                   (if (and (vector? tx) (= :dt/cas (first tx)))
+                     (apply cas/cas (into [db] (drop 1 tx)))
+                     [tx]))
+                 full-tx))))
 
 (defn transact [x]
   @(d/transact *conn* x))
