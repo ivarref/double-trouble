@@ -1,4 +1,4 @@
-# <img align="right" src="the_clash.png" width="200" height="200"> [No more] double trouble
+# <img align="right" src="the_clash.png" width="187" height="200"> [No more] double trouble
 
 Handle duplicate Datomic transactions with ease.
 A modified compare-and-swap function that handles for duplicates.
