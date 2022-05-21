@@ -68,17 +68,14 @@
 
 (defn return-already-transacted [conn e]
   (let [{:com.github.ivarref.double-trouble/keys [tx]} (ex-data (root-cause e))]
-    {:tx-data []
-     :tempids {}
-     :transacted? false
-     :already-transacted? true
-     :db-after (d/as-of (d/db conn) tx)
-     :db-before (d/as-of (d/db conn) (dec tx))}))
+    {:transacted? false
+     :db-after    (d/as-of (d/db conn) tx)
+     :db-before   (d/as-of (d/db conn) (dec tx))}))
 
 (defmacro handle-dt-cas [conn future-result]
   `(try
      (let [res# ~future-result]
-       (assoc res# :transacted? true :already-transacted? false))
+       (assoc res# :transacted? true))
      (catch Exception exception#
        (if (already-transacted? exception#)
          (return-already-transacted ~conn exception#)

@@ -1,14 +1,5 @@
-# [No more] double trouble
+(ns com.github.ivarref.readme-md)
 
-Handle duplicate Datomic transactions with ease.
-
-## Installation
-
-...
-
-## 2-minute example
-
-```clojure
 (require '[com.github.ivarref.double-trouble :as dt])
 (require '[datomic.api :as d])
 
@@ -58,7 +49,7 @@ Handle duplicate Datomic transactions with ease.
 ; Why did the above succeed?
 ; :dt/cas detected that:
 ; :e/version 1 -> 2 had already been asserted in a previous transaction and
-; that the sha asserted in that previous transaction matched the sha
+; the sha asserted in that previous transaction is identical to the sha
 ; in the current transaction.
 ; Thus this is a duplicate transaction that should be allowed.
 ; :dt/cas throws an exception indicating this.
@@ -67,7 +58,3 @@ Handle duplicate Datomic transactions with ease.
 ; catches this particular exception, and returns a result as if the
 ; transaction had succeeded: a map with the keys :db-before, :db-after and
 ; :transacted? (false).
-```
-
-## Motivation
-
