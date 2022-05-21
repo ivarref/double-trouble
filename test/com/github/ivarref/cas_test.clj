@@ -103,8 +103,8 @@
   (let [{:keys [db-after]} @(d/transact *conn* [[:dt/cas [:e/id "a" :as "tempid"] :e/version 1 2 "my-sha-2"]
                                                 {:db/id "tempid" :e/id "a" :e/info "2"}])]
     (is (= #:e{:id "a" :info "2" :version 2} (d/pull db-after [:e/id :e/info :e/version] [:e/id "a"]))))
-  (is (= "Cas failure" (err-msg @(d/transact *conn* [[:dt/cas [:e/id "a" :as "tempid"] :e/version 999 3 "my-sha-3"]
-                                                     {:db/id "tempid" :e/id "a" :e/info "2"}])))))
+  (is (= ":db.error/cas-failed Compare failed: 999 2" (err-msg @(d/transact *conn* [[:dt/cas [:e/id "a" :as "tempid"] :e/version 999 3 "my-sha-3"]
+                                                                                    {:db/id "tempid" :e/id "a" :e/info "2"}])))))
 
 
 (deftest datomic-insert-unique-value-behaviour
@@ -185,8 +185,6 @@
       (is (= tempids (:tempids (transact [{:db/id "tempid", :e/id "a", :e/info "1"}
                                           [:nmdt/cas "tempid" :e/version nil 1]]))))))
 
-(defn dry-cas [args]
-  (apply cas/cas (into [(d/db *conn*)] (drop 1 args))))
 
 (deftest initial-duplicate-is-fine
   @(d/transact *conn*
@@ -236,8 +234,8 @@
 (deftest transact-bad-cas
   @(d/transact *conn* [{:e/id "a" :db/id "tempid"}
                        [:dt/cas [:e/id "a" :as "tempid"] :e/version nil 1 "sha-1"]])
-  (is (= "Cas failure" (err-msg (dry-cas [:dt/cas [:e/id "a"] :e/version 123 2 "sha-2"]))))
-  (is (= "Cas failure" (err-msg @(d/transact *conn* [[:dt/cas [:e/id "a"] :e/version 123 2 "sha-2"]])))))
+  ;(is (= "Cas failure" (err-msg (dry-cas [:dt/cas [:e/id "a"] :e/version 123 2 "sha-2"]))))
+  (is (= ":db.error/cas-failed Compare failed: 123 1" (err-msg @(d/transact *conn* [[:dt/cas [:e/id "a"] :e/version 123 2 "sha-2"]])))))
 
 (deftest transact-wrapper-test
   (let [_res @(dt/transact *conn* [{:e/id "a" :e/version 1}])]

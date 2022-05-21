@@ -108,14 +108,9 @@
                  :com.github.ivarref.double-trouble/new-val new-val
                  :com.github.ivarref.double-trouble/tx      tx-written
                  :com.github.ivarref.double-trouble/sha     sha})
-      (d/cancel {:cognitect.anomalies/category              :cognitect.anomalies/conflict
-                 :cognitect.anomalies/message               "Cas failure"
-                 :com.github.ivarref.double-trouble/code    :cas-failure
-                 :com.github.ivarref.double-trouble/e       e
-                 :com.github.ivarref.double-trouble/a       a
-                 :com.github.ivarref.double-trouble/old-val old-val
-                 :com.github.ivarref.double-trouble/new-val new-val
-                 :com.github.ivarref.double-trouble/sha     sha}))))
+      ; This will throw a regular cas exception, but we expand to it anyway.
+      ; This is done so that existing exception handling doesn't need to updated.
+      [[:db/cas e a old-val new-val]])))
 
 (defn cas-inner-2 [db lookup-ref
                    a
