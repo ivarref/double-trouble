@@ -5,7 +5,9 @@ A modified compare-and-swap (cas) function that handles duplicates.
 
 ## Installation
 
-...
+```
+com.github.ivarref/double-trouble {:git/url "https://github.com/ivarref/double-trouble.git" :git/sha "5c91f6cb6c23c0936817a2782a5c0d12cd6e0e3e"}
+```
 
 ## 2-minute example
 
