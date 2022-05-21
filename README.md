@@ -1,8 +1,7 @@
 # [No more] double trouble
 
 Handle duplicate Datomic transactions with ease.
-A modified compare-and-swap function that allows for duplicates
-if a sha matches ...
+A modified compare-and-swap function that handles for duplicates.
 
 ## Installation
 
