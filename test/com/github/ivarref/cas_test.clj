@@ -207,7 +207,7 @@
                                       [:dt/cas "tempid" :e/version nil 1 "sha-1"]]))
     (fail "Should not get here")
     (catch Exception e
-      (is (= :can-recover (dt/error-code e)))
+      (is (= :already-transacted (dt/error-code e)))
       (is (true? (dt/already-transacted? e)))))
 
   #_(is (true? (:transacted? (transact [{:e/id "a" :e/info "2"}
@@ -238,3 +238,12 @@
                        [:dt/cas [:e/id "a" :as "tempid"] :e/version nil 1 "sha-1"]])
   (is (= "Cas failure" (err-msg (dry-cas [:dt/cas [:e/id "a"] :e/version 123 2 "sha-2"]))))
   (is (= "Cas failure" (err-msg @(d/transact *conn* [[:dt/cas [:e/id "a"] :e/version 123 2 "sha-2"]])))))
+
+(deftest transact-wrapper-test
+  (let [_res @(dt/transact *conn* [{:e/id "a" :e/version 1}])]
+    (is (true? (:transacted? @(dt/transact *conn* [[:dt/cas [:e/id "a"] :e/version 1 2 "my-sha"]]))))
+    (let [{:keys [transacted? db-after db-before]} @(dt/transact *conn* [[:dt/cas [:e/id "a"] :e/version 1 2 "my-sha"]])]
+      (is (= 1 (:e/version (d/pull db-before [:e/version] [:e/id "a"]))))
+      (is (= 2 (:e/version (d/pull db-after [:e/version] [:e/id "a"]))))
+      (is (false? transacted?)))))
+

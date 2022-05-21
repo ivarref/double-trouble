@@ -100,8 +100,8 @@
   (let [tx-written (already-written?->tx db e a old-val new-val sha)]
     (if (some? tx-written)
       (d/cancel {:cognitect.anomalies/category              :cognitect.anomalies/conflict
-                 :cognitect.anomalies/message               "Can recover"
-                 :com.github.ivarref.double-trouble/code    :can-recover
+                 :cognitect.anomalies/message               "Already transacted"
+                 :com.github.ivarref.double-trouble/code    :already-transacted
                  :com.github.ivarref.double-trouble/e       e
                  :com.github.ivarref.double-trouble/a       a
                  :com.github.ivarref.double-trouble/old-val old-val
