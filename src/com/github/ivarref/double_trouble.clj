@@ -87,8 +87,7 @@
 (defmacro handle-dt-cas [conn future-result]
   `(try
      (let [res# ~future-result]
-       (assoc res# :transacted? true
-                   :already-transacted? false))
+       (assoc res# :transacted? true :already-transacted? false))
      (catch Exception exception#
        (if (already-transacted? exception#)
          (return-already-transacted ~conn exception#)
