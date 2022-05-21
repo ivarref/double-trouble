@@ -1,15 +1,15 @@
 (ns com.github.ivarref.cas-test
-  (:require [clojure.test :refer [deftest is use-fixtures]]
-            [clojure.edn :as edn]
-            [com.github.ivarref.log-init :as log-init]
-            [datomic.api :as d]
-            [com.github.ivarref.double-trouble :as dt]
-            [com.github.ivarref.gen-fn :as gen-fn]
-            [com.github.ivarref.stacktrace]
-            [com.github.ivarref.debug]
-            [com.github.ivarref.double-trouble.cas :as cas]
+  (:require [clojure.edn :as edn]
+            [clojure.string :as str]
+            [clojure.test :refer [deftest is use-fixtures]]
             [clojure.tools.logging :as log]
-            [clojure.string :as str]))
+            [com.github.ivarref.debug]
+            [com.github.ivarref.double-trouble :as dt]
+            [com.github.ivarref.double-trouble.cas :as cas]
+            [com.github.ivarref.gen-fn :as gen-fn]
+            [com.github.ivarref.log-init :as log-init]
+            [com.github.ivarref.stacktrace]
+            [datomic.api :as d]))
 
 (log-init/init-logging!
   [[#{"datomic.*" "com.datomic.*" "org.apache.*"} :warn]
@@ -243,11 +243,15 @@
   ;(is (= "Cas failure" (err-msg (dry-cas [:dt/cas [:e/id "a"] :e/version 123 2 "sha-2"]))))
   (is (= ":db.error/cas-failed Compare failed: 123 1" (err-msg @(d/transact *conn* [[:dt/cas [:e/id "a"] :e/version 123 2 "sha-2"]])))))
 
+(defn dt-tx [tx-data]
+  @(dt/transact *conn* tx-data))
+
 (deftest transact-wrapper-test
-  (let [_res @(dt/transact *conn* [{:e/id "a" :e/version 1}])]
-    (is (true? (:transacted? @(dt/transact *conn* [[:dt/cas [:e/id "a"] :e/version 1 2 "my-sha"]]))))
-    (let [{:keys [transacted? db-after db-before]} @(dt/transact *conn* [[:dt/cas [:e/id "a"] :e/version 1 2 "my-sha"]])]
-      (is (= 1 (:e/version (d/pull db-before [:e/version] [:e/id "a"]))))
-      (is (= 2 (:e/version (d/pull db-after [:e/version] [:e/id "a"]))))
-      (is (false? transacted?)))))
+  (dt-tx [{:e/id "a" :e/version 1}])
+  (is (true? (:transacted? (dt-tx [[:dt/cas [:e/id "a"] :e/version 1 2 "my-sha"]]))))
+  (let [{:keys [transacted? db-after db-before] :as res} (dt-tx [[:dt/cas [:e/id "a"] :e/version 1 2 "my-sha"]])]
+    (is (= 1 (:e/version (d/pull db-before [:e/version] [:e/id "a"]))))
+    (is (= 2 (:e/version (d/pull db-after [:e/version] [:e/id "a"]))))
+    (is (false? transacted?))
+    (is (= res (dt-tx [[:dt/cas [:e/id "a"] :e/version 1 2 "my-sha"]])))))
 

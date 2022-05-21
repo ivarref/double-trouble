@@ -1,6 +1,5 @@
 (ns com.github.ivarref.double-trouble
-  (:require [clojure.string :as str]
-            [com.github.ivarref.double-trouble.cas :as cas]
+  (:require [com.github.ivarref.double-trouble.cas :as cas]
             [com.github.ivarref.double-trouble.generated :as gen]
             [com.github.ivarref.double-trouble.sha :as sha]
             [datomic.api :as d])
