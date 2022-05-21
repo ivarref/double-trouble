@@ -21,8 +21,8 @@
 @(d/transact conn [{:e/id "my-id" :e/version 1 :e/info "Initial version"}])
 
 ; Sample payload:
-(def payload {:e/id "my-id"
-              :e/info "Second version"
+(def payload {:e/id      "my-id"
+              :e/info    "Second version"
               :e/version 1})
 
 ; Initial commit using :dt/cas is fine:
@@ -70,3 +70,11 @@
       '...handle-exception...)))
 
 
+(try
+  (let [{:keys [transacted?]} @(dt/transact conn [(dissoc payload :e/version)
+                                                  [:dt/cas [:e/id "my-id"] :e/version 1 2 (dt/sha payload)]])]
+    {:status (if transacted? 201 200) :body {:message "OK"}})
+  (catch Exception e
+    (if (dt/cas-failure? e :e/version)
+      {:status 409 :body {:message "Conflict"}}
+      {:status 500 :body {:message ""}})))

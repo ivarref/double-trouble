@@ -133,13 +133,39 @@ If you prefer handling the exception yourself, you may do it as the following:
 (require '[datomic.api :as d])
 
 (try
-  @(d/transact conn [(dissoc payload :e/version)
-                     [:dt/cas [:e/id "my-id"] :e/version 1 2 (dt/sha payload)]])
+  @(d/transact conn ...)
   (catch Exception e
     (if (dt/already-transacted? e)
       :ok
       '...handle-exception...)))
 ```
+
+## Example usage in the case of a HTTP backend
+
+```clojure
+(try
+  (let [{:keys [transacted?]} @(dt/transact conn ...)]
+    {:status (if transacted? 201 200) :body {:message "OK"}})
+  (catch Exception e
+    (if (dt/cas-failure? e :e/version)
+      {:status 409 :body {:message "Conflict"}}
+      {:status 500 :body {:message "Internal server error"}})))
+```
+
+
+## Error handling and sanity checking
+
+If there is a regular cas mismatch and thus an actual conflict, `:dt/cas`
+will throw an exception identical to the one thrown by `:db/cas`.
+Thus if you are already catching this kind of exception, you may keep
+using that code.
+
+If `com.github.ivarref.double-trouble/transact` detects a duplicate sha
+for a non-duplicate transaction, it will reset the atom
+`com.github.ivarref.double-trouble/healthy?` to `false`.
+You may monitor this atom in a healthcheck. It defaults to `true`.
+If this happens, your code is most likely broken (or a sha collision
+has occurred).
 
 ## Limitations
 
