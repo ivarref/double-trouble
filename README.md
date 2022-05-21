@@ -99,7 +99,7 @@ occurs after a transaction has successfully completed:
 
 The aim of this library is to handle such scenarios.
 
-Had `:dt/cas` (and not `:db/cas`) been used, the retry would have
+Had `:dt/cas`, and not `:db/cas`, been used, the retry would have
 been successful.
 
 ## Usage
