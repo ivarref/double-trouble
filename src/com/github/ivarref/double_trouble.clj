@@ -96,10 +96,8 @@
 
 (defn transact [conn tx]
   (assert (instance? Connection conn) "conn must be an instance of datomic.Connection")
-  #_(assert (and (string? sha) (= 40 (count sha))) "sha must be a string of length 40")
   (assert (vector? tx) "tx must be a vector")
-  (let [tx (resolve-tempids (d/db conn) tx)
-        fut (d/transact conn tx)]
+  (let [fut (d/transact conn (resolve-tempids (d/db conn) tx))]
     (reify
       IDeref
       (deref [_]
