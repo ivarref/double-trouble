@@ -17,6 +17,9 @@
                                      "-DTAOENSSO_TIMBRE_MIN_LEVEL_EDN=:error"]
                        :main-opts   ["--report" "stderr" "-m" "cognitect.test-runner"]}
 
+             :build {:deps {com.github.liquidz/build.edn {:git/tag "0.1.55" :git/sha "2315904"}}
+                     :ns-default build-edn.main}
+
              :jar     {:extra-deps {pack/pack.alpha {:git/url "https://github.com/juxt/pack.alpha.git"
                                                      :sha     "0e8731e0f24db05b74769e219051b0e92b50624a"}}
                        :main-opts  ["-m" "mach.pack.alpha.skinny" "--no-libs" "--project-path" "target/out.jar"]}
