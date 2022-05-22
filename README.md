@@ -182,10 +182,6 @@ has occurred).
 transactions it removes those keys so that you do not mistakenly
 rely on them when using this library ¯\\\_(ツ)\_/¯.
 
-## Related
-
-...
-
 ## License
 
 Copyright © 2022 Ivar Refsdal
