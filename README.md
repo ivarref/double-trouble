@@ -150,10 +150,10 @@ If you prefer handling the exception yourself, you may do it as the following:
     {:status (if transacted? 201 200) :body (d/pull db-after lookup-ref [:*])})
   (catch Exception e
     (if (dt/cas-failure? e :e/version)
-      {:status 409 :body {:message "Conflict" :expected (dt/expected-cas-value e) :actual (dt/actual-cas-value e)}}
+      {:status 409 :body {:message "Conflict" :expected (dt/expected-val e) :given (dt/given-val e)}}
       {:status 500 :body {:message "Internal server error"}})))
 ```
-The code is simplified, but illustrates the gist of a server.
+The code is simplified, but illustrates the gist of a typical endpoint.
 You'll want to handle:
 * Actual executed transaction: response code 201.
 * Duplicate transaction: response code 200.
@@ -161,7 +161,7 @@ You'll want to handle:
 * Other errors: response code 500.
 
 
-## Error handling and sanity checking
+## Error handling and health checking
 
 If there is a regular cas mismatch and thus an actual conflict, `:dt/cas`
 will throw an exception identical to the one thrown by `:db/cas`.

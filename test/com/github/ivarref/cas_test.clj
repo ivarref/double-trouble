@@ -8,8 +8,9 @@
             [com.github.ivarref.gen-fn :as gen-fn]
             [com.github.ivarref.log-init :as log-init]
             [com.github.ivarref.stacktrace]
-            [datomic.api :as d]
-            [com.github.ivarref.debug]))
+            [datomic.api :as d]))
+
+(require '[com.github.ivarref.debug])
 
 (log-init/init-logging!
   [[#{"datomic.*" "com.datomic.*" "org.apache.*"} :warn]
@@ -267,3 +268,13 @@
     (catch Exception e
       (is (true? (dt/duplicate-sha? e)))))
   (is (false? @dt/healthy?)))
+
+(deftest cas-helpers
+  @(d/transact *conn* [{:e/id "a" :e/version 1}])
+  (try
+    (dtx [[:dt/cas [:e/id "a"] :e/version 2 3 "sha"]])
+    (fail "Should not get here")
+    (catch Exception e
+      (is (true? (dt/cas-failure? e :e/version)))
+      (is (= 1 (dt/expected-val e)))
+      (is (= 2 (dt/given-val e))))))

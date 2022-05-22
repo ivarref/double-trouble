@@ -71,6 +71,17 @@
 (defn duplicate-sha? [e]
   (= :sha-exists (error-code e)))
 
+(defn cas-failure? [e attr]
+  (when-let [ex-dat (ex-data (root-cause e))]
+    (and (= :db.error/cas-failed (:db/error ex-dat))
+         (= attr (:a ex-dat)))))
+
+(defn expected-val [e]
+  (get (ex-data (root-cause e)) :v))
+
+(defn given-val [e]
+  (get (ex-data (root-cause e)) :v-old))
+
 (defn return-already-transacted [conn e]
   (let [{:com.github.ivarref.double-trouble/keys [tx]} (ex-data (root-cause e))]
     {:transacted? false
