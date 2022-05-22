@@ -147,7 +147,7 @@ If you prefer handling the exception yourself, you may do it as the following:
 ```clojure
 (try
   (let [{:keys [transacted? db-after]} @(dt/transact conn ...)]
-    {:status (if transacted? 201 200) :body (d/pull db-after lookup-ref [:*])})
+    {:status (if transacted? 201 200) :body (d/pull db-after [:*] lookup-ref)})
   (catch Exception e
     (if (dt/cas-failure? e :e/version)
       {:status 409 :body {:message "Conflict" :expected (dt/expected-val e) :given (dt/given-val e)}}
@@ -172,15 +172,27 @@ If `com.github.ivarref.double-trouble/transact` detects a duplicate sha
 for a non-duplicate transaction, it will reset the atom
 `com.github.ivarref.double-trouble/healthy?` to `false`.
 You may monitor this atom in a healthcheck. It defaults to `true`.
-If this happens, your code is most likely broken (or a sha collision
-has occurred).
+
+If a duplicate sha occurs, your code is most likely broken (or a sha collision
+has occurred). It could also be that `double trouble`'s logic failed in some
+unforeseen way, and thus did in fact introduce additional trouble ¯\\\_(ツ)\_/¯.
+
+## FAQ
+
+> Can I use shas for versioning?
+
+Yes.
+
+> Where is the sha asserted? 
+
+The sha is asserted on the transaction metadata attribute `:com.github.ivarref.double-trouble/sha-1`.
 
 ## Limitations
 
 `com.github.ivarref.double-trouble/transact` does not return
 `tempids` nor `tx-data` for duplicate transactions. For regular
 transactions it removes those keys so that you do not mistakenly
-rely on them when using this library ¯\\\_(ツ)\_/¯.
+rely on them when using this library.
 
 ## License
 

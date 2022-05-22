@@ -109,7 +109,7 @@
                  :com.github.ivarref.double-trouble/tx      tx-written
                  :com.github.ivarref.double-trouble/sha     sha})
       ; This will throw a regular cas exception, but we expand to it anyway.
-      ; This is done so that existing exception handling doesn't need to updated.
+      ; This is done so that existing exception handling doesn't need to be updated.
       [[:db/cas e a old-val new-val]])))
 
 (defn cas-inner-2 [db lookup-ref
