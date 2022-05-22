@@ -137,6 +137,9 @@
     (d/cancel {:cognitect.anomalies/category :cognitect.anomalies/incorrect
                :cognitect.anomalies/message  "Entity cannot be tempid/datomic.db.DbId"})
 
+    (int? e-or-lookup-ref)
+    (cas-inner-2 db e-or-lookup-ref a old-val new-val sha)
+
     (and (vector? e-or-lookup-ref)
          (= 2 (count e-or-lookup-ref))
          (or (is-identity? db (first e-or-lookup-ref))

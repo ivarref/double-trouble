@@ -278,3 +278,8 @@
       (is (true? (dt/cas-failure? e :e/version)))
       (is (= 1 (dt/expected-val e)))
       (is (= 2 (dt/given-val e))))))
+
+(deftest support-long-eids
+  @(d/transact *conn* [{:e/id "a" :e/version 1}])
+  (let [eid (:db/id (d/pull (d/db *conn*) [:db/id] [:e/id "a"]))]
+    (dtx [[:dt/cas eid :e/version 1 2 "sha"]])))
