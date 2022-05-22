@@ -71,7 +71,7 @@ com.github.ivarref/double-trouble {:git/url "https://github.com/ivarref/double-t
 
 > The network is reliable
 
-The first assertion of [fallacies of distributed computing](https://en.wikipedia.org/wiki/Fallacies_of_distributed_computing).
+*The first assertion of [fallacies of distributed computing](https://en.wikipedia.org/wiki/Fallacies_of_distributed_computing).*
 
 `:db/cas`, compare-and-swap, can be used as a lock/protection
 if you want to disallow concurrent edits on some entity.
