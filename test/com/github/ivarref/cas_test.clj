@@ -36,6 +36,7 @@
                (d/create-database uri)
                (d/connect uri))]
     (try
+      (reset! dt/healthy? true)
       @(d/transact conn dt/schema)
       @(d/transact conn test-schema)
       @(d/transact conn [(gen-fn/datomic-fn :dt/cas #'cas/cas)])
@@ -243,15 +244,26 @@
   ;(is (= "Cas failure" (err-msg (dry-cas [:dt/cas [:e/id "a"] :e/version 123 2 "sha-2"]))))
   (is (= ":db.error/cas-failed Compare failed: 123 1" (err-msg @(d/transact *conn* [[:dt/cas [:e/id "a"] :e/version 123 2 "sha-2"]])))))
 
-(defn dt-tx [tx-data]
+(defn dtx [tx-data]
   @(dt/transact *conn* tx-data))
 
 (deftest transact-wrapper-test
-  (dt-tx [{:e/id "a" :e/version 1}])
-  (is (true? (:transacted? (dt-tx [[:dt/cas [:e/id "a"] :e/version 1 2 "my-sha"]]))))
-  (let [{:keys [transacted? db-after db-before] :as res} (dt-tx [[:dt/cas [:e/id "a"] :e/version 1 2 "my-sha"]])]
+  (dtx [{:e/id "a" :e/version 1}])
+  (is (true? (:transacted? (dtx [[:dt/cas [:e/id "a"] :e/version 1 2 "my-sha"]]))))
+  (let [{:keys [transacted? db-after db-before] :as res} (dtx [[:dt/cas [:e/id "a"] :e/version 1 2 "my-sha"]])]
     (is (= 1 (:e/version (d/pull db-before [:e/version] [:e/id "a"]))))
     (is (= 2 (:e/version (d/pull db-after [:e/version] [:e/id "a"]))))
     (is (false? transacted?))
-    (is (= res (dt-tx [[:dt/cas [:e/id "a"] :e/version 1 2 "my-sha"]])))))
+    (is (= res (dtx [[:dt/cas [:e/id "a"] :e/version 1 2 "my-sha"]])))))
 
+(deftest duplicate-sha->unhealthy
+  (is (true? @dt/healthy?))
+  @(d/transact *conn* [{:e/id "a" :e/version 1}
+                       {:e/id "b" :e/version 1}])
+  (dtx [[:dt/cas [:e/id "a"] :e/version 1 2 "sha"]])
+  (try
+    (dtx [[:dt/cas [:e/id "b"] :e/version 1 2 "sha"]])
+    (fail "Should not get here")
+    (catch Exception e
+      (is (true? (dt/duplicate-sha? e)))))
+  (is (false? @dt/healthy?)))

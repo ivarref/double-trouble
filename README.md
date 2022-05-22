@@ -146,13 +146,19 @@ If you prefer handling the exception yourself, you may do it as the following:
 
 ```clojure
 (try
-  (let [{:keys [transacted?]} @(dt/transact conn ...)]
-    {:status (if transacted? 201 200) :body {:message "OK"}})
+  (let [{:keys [transacted? db-after]} @(dt/transact conn ...)]
+    {:status (if transacted? 201 200) :body (d/pull db-after lookup-ref [:*])})
   (catch Exception e
     (if (dt/cas-failure? e :e/version)
-      {:status 409 :body {:message "Conflict"}}
+      {:status 409 :body {:message "Conflict" :expected (dt/expected-cas-value e) :actual (dt/actual-cas-value e)}}
       {:status 500 :body {:message "Internal server error"}})))
 ```
+The code is simplified, but illustrates the gist of a server.
+You'll want to handle:
+* Actual executed transaction: response code 201.
+* Duplicate transaction: response code 200.
+* Cas error: response code 409.
+* Other errors: response code 500.
 
 
 ## Error handling and sanity checking
