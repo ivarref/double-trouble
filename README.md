@@ -119,7 +119,7 @@ The last argument, the sha, should represent the essence of the transaction.
 It will be used to check if the transaction has already been committed in
 the event of a cas failure, i.e. if this transaction has a duplicate.
 
-You may use `(dt/sha payload)` to generate a sha. `my-data` must obviously
+You may use `(dt/sha my-data)` to generate a sha. `my-data` must obviously
 be identical for transactions that should be considered identical.
 `dt/sha` converts maps and sets into their sorted forms before
 calculating the sha.
