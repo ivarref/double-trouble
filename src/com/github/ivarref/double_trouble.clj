@@ -60,6 +60,29 @@
 (defn resolve-tempids [db tx]
   (mapv (partial resolve-tempid db tx) tx))
 
+(defn is-ref? [db attr]
+  (= :db.type/ref
+     (d/q '[:find ?ident .
+            :in $ ?e
+            :where
+            [?e :db/valueType ?typ]
+            [?typ :db/ident ?ident]]
+          db
+          attr)))
+
+(defn resolve-enum-ref [db tx]
+  (if (and (vector? tx)
+           (= 5 (count tx))
+           (= :db/cas (first tx)))
+    (let [[op e a v-old v-new] tx]
+      (if (and (is-ref? db a)
+               (keyword? v-old))
+        [op e a (:db/id (d/pull db [:db/id] v-old)) v-new]
+        tx))
+    tx))
+
+(defn resolve-enum-refs [db full-tx]
+  (mapv (partial resolve-enum-ref db) full-tx))
 
 (defn error-code [e]
   (when-let [dat (ex-data (root-cause e))]
@@ -88,6 +111,11 @@
      :db-after    (d/as-of (d/db conn) tx)
      :db-before   (d/as-of (d/db conn) (dec tx))}))
 
+(defn expand-tx [db full-tx]
+  (->> full-tx
+       (resolve-tempids db)
+       (resolve-enum-refs db)))
+
 (defmacro handle-dt-cas [conn future-result]
   `(try
      (let [res# ~future-result]
@@ -112,7 +140,7 @@
 (defn transact [conn tx]
   (assert (instance? Connection conn) "conn must be an instance of datomic.Connection")
   (assert (vector? tx) "tx must be a vector")
-  (let [fut (d/transact conn (resolve-tempids (d/db conn) tx))]
+  (let [fut (d/transact conn (expand-tx (d/db conn) tx))]
     (reify
       IDeref
       (deref [_]

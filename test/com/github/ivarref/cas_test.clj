@@ -29,6 +29,10 @@
    #:db{:ident :e/version-str, :cardinality :db.cardinality/one, :valueType :db.type/string}
    #:db{:ident :e/version-uuid, :cardinality :db.cardinality/one, :valueType :db.type/uuid}
    #:db{:ident :e/info, :cardinality :db.cardinality/one, :valueType :db.type/string}
+   #:db{:ident :e/ref, :cardinality :db.cardinality/one, :valueType :db.type/ref}
+   #:db{:ident :e/enum-1}
+   #:db{:ident :e/enum-2}
+   #:db{:ident :e/enum-3}
    #:db{:ident :e/modified, :cardinality :db.cardinality/one, :valueType :db.type/instant}])
 
 (defn with-new-conn [f]
@@ -283,3 +287,25 @@
   @(d/transact *conn* [{:e/id "a" :e/version 1}])
   (let [eid (:db/id (d/pull (d/db *conn*) [:db/id] [:e/id "a"]))]
     (dtx [[:dt/cas eid :e/version 1 2 "sha"]])))
+
+(defn pull-ref [e attr]
+  (d/q '[:find ?ident .
+         :in $ ?e ?a
+         :where
+         [?e ?a ?v]
+         [?v :db/ident ?ident]]
+       (d/db *conn*)
+       e
+       attr))
+
+(deftest regular-cas-improvement
+  (dtx [{:e/id "a" :e/version 1 :e/ref :e/enum-1}])
+  (is (= :e/enum-1 (pull-ref [:e/id "a"] :e/ref)))
+  (dtx [[:db/cas [:e/id "a"] :e/ref :e/enum-1 :e/enum-2]])
+  (is (= :e/enum-2 (pull-ref [:e/id "a"] :e/ref)))
+
+  (try
+    (dtx [[:db/cas [:e/id "a"] :e/ref :e/enum-1 :e-enum-3]])
+    (fail "Should not get here")
+    (catch Exception e
+      (is (true? (dt/cas-failure? e :e/ref))))))
