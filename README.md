@@ -127,7 +127,17 @@ calculating the sha.
 You may use `com.github.ivarref.double-trouble/transact` to transact data
 containing `:dt/cas`. It will catch exceptions, return success in the
 case of a duplicate transaction, or re-throw other exceptions.
-It will also resolve tempids on the input tx-data.
+It will also resolve tempids on the input tx-data:
+
+```clojure
+(require '[com.github.ivarref.double-trouble :as dt])
+
+(let [{:keys [transacted? db-after]} @(dt/transact conn [[:dt/cas lookup-ref attr old-val new-val sha]])]
+  (if transacted?
+    (log/info "transacted data")
+    (log/info "duplicate transaction is fine"))
+  (d/pull db-after [:*] lookup-ref))
+```
 
 If you prefer handling the exception yourself, you may do it as the following:
 ```clojure
