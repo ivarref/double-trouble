@@ -132,7 +132,9 @@ It will also resolve tempids on the input tx-data:
 ```clojure
 (require '[com.github.ivarref.double-trouble :as dt])
 
-(let [{:keys [transacted? db-after]} @(dt/transact conn [[:dt/cas lookup-ref attr old-val new-val sha]])]
+(let [{:keys [transacted? db-after]} @(dt/transact 
+                                        conn 
+                                        [[:dt/cas lookup-ref attr old-val new-val sha]])]
   (if transacted?
     (log/info "transacted data")
     (log/info "duplicate transaction is fine"))
