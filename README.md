@@ -1,7 +1,7 @@
 # <img align="right" src="the_clash.png" width="187" height="200"> [No more] double trouble
 
 Handle duplicate Datomic transactions with ease.
-A modified compare-and-swap (cas) function that handles duplicates.
+A modified compare-and-swap (cas) function that handles duplicates. On-prem.
 
 ## Installation
 
