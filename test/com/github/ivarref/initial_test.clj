@@ -2,13 +2,11 @@
   (:require [clojure.test :as test :refer [deftest is]]
             [com.github.ivarref.double-trouble :as ndt]
             [com.github.ivarref.log-init :as log-init]
-            [datomic.api :as d]
-            [clojure.edn :as edn]))
+            [datomic.api :as d]))
 
 (log-init/init-logging!
   [[#{"datomic.*" "com.datomic.*" "org.apache.*"} :warn]
-   [#{"*"} (edn/read-string
-             (System/getProperty "TAOENSSO_TIMBRE_MIN_LEVEL_EDN" ":info"))]])
+   [#{"*"} :info]])
 
 (def ^:dynamic *conn* nil)
 

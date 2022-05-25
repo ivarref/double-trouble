@@ -1,13 +1,11 @@
 (ns com.github.ivarref.cas-should-resolve-tempid-string
   (:require [clojure.test :as test :refer [deftest is]]
-            [datomic.api :as d]
             [com.github.ivarref.log-init :as log-init]
-            [clojure.edn :as edn]))
+            [datomic.api :as d]))
 
 (log-init/init-logging!
   [[#{"datomic.*" "com.datomic.*" "org.apache.*"} :warn]
-   [#{"*"} (edn/read-string
-             (System/getProperty "TAOENSSO_TIMBRE_MIN_LEVEL_EDN" ":info"))]])
+   [#{"*"} :info]])
 
 (def ^:dynamic *conn* nil)
 

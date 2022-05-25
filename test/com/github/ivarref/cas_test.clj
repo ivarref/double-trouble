@@ -1,6 +1,5 @@
 (ns com.github.ivarref.cas-test
-  (:require [clojure.edn :as edn]
-            [clojure.string :as str]
+  (:require [clojure.string :as str]
             [clojure.test :refer [deftest is use-fixtures]]
             [clojure.tools.logging :as log]
             [com.github.ivarref.double-trouble :as dt]
@@ -14,8 +13,7 @@
 
 (log-init/init-logging!
   [[#{"datomic.*" "com.datomic.*" "org.apache.*"} :warn]
-   [#{"*"} (edn/read-string
-             (System/getProperty "TAOENSSO_TIMBRE_MIN_LEVEL_EDN" ":info"))]])
+   [#{"*"} :info]])
 
 (def ^:dynamic *conn* nil)
 
