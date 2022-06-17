@@ -204,6 +204,23 @@ The sha is asserted on the transaction metadata attribute `:com.github.ivarref.d
 transactions it removes those keys so that you do not mistakenly
 rely on them when using this library.
 
+## Alternatives and related software
+
+I did not find any similar libraries for Datomic.
+
+[toxiproxy](https://github.com/Shopify/toxiproxy), a TCP proxy to simulate network and system conditions for chaos
+and resiliency testing, as well as [clj-test-containers](https://github.com/javahippie/clj-test-containers)
+and/or [testcontainers-java](https://github.com/testcontainers/testcontainers-java) is worth checking out.
+
+I've also written [mikkmokk-proxy](https://github.com/ivarref/mikkmokk-proxy), an HTTP reverse proxy
+for doing fault injection on the HTTP layer, as well as [yoltq](https://github.com/ivarref/yoltq) a
+persistent Datomic queue for building (more) reliable systems.
+
+## Changelog
+
+#### 2022-06-17 v0.1.
+Initial public announcement.
+
 ## License
 
 Copyright © 2022 Ivar Refsdal
