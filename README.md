@@ -223,7 +223,7 @@ persistent Datomic queue for building (more) reliable systems.
 
 ## Changelog
 
-#### 2022-06-17 v0.1.87
+#### 2022-06-17 v0.1.89
 First publicly announced release.
 
 ## License
