@@ -66,6 +66,14 @@
     [[:db/add lookup-ref a new-val]
      [:db/add "datomic.tx" :com.github.ivarref.double-trouble/sha-1 sha]]))
 
+(defn most-recent-assert [db e a]
+  (d/q '[:find (max ?tx) .
+         :in $ ?e ?a
+         :where
+         [?e ?a _ ?tx true]]
+       (d/history db)
+       e a))
+
 (defn already-written?->tx [db e a old-val new-val sha]
   (if (some? old-val)
     (d/q '[:find ?tx .
@@ -97,8 +105,8 @@
 
 (defn cas-mismatch [db e a old-val new-val sha]
   ; Cas is not fine. See if values are already written
-  (let [tx-written (already-written?->tx db e a old-val new-val sha)]
-    (if (some? tx-written)
+  (if-some [tx-written (already-written?->tx db e a old-val new-val sha)]
+    (if (= tx-written (most-recent-assert db e a))
       (d/cancel {:cognitect.anomalies/category              :cognitect.anomalies/conflict
                  :cognitect.anomalies/message               "Already transacted"
                  :com.github.ivarref.double-trouble/code    :already-transacted
@@ -110,7 +118,8 @@
                  :com.github.ivarref.double-trouble/sha     sha})
       ; This will throw a regular cas exception, but we expand to it anyway.
       ; This is done so that existing exception handling doesn't need to be updated.
-      [[:db/cas e a old-val new-val]])))
+      [[:db/cas e a old-val new-val]])
+    [[:db/cas e a old-val new-val]]))
 
 (defn cas-inner-2 [db lookup-ref
                    a

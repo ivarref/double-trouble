@@ -259,6 +259,16 @@
     (is (false? transacted?))
     (is (= res (dtx [[:dt/cas [:e/id "a"] :e/version 1 2 "my-sha"]])))))
 
+(deftest do-not-accept-old-duplicates
+  (dtx [{:e/id "a" :e/version 1}])
+  (is (true? (:transacted? (dtx [[:dt/cas [:e/id "a"] :e/version 1 2 "my-sha"]]))))
+  (is (true? (:transacted? (dtx [[:dt/cas [:e/id "a"] :e/version 2 3 "my-sha-2"]]))))
+  (try
+    (dtx [[:dt/cas [:e/id "a"] :e/version 1 2 "my-sha"]])
+    (fail "should not get here")
+    (catch Exception e
+      (is (true? (dt/cas-failure? e :e/version))))))
+
 (deftest duplicate-sha->unhealthy
   (is (true? @dt/healthy?))
   @(d/transact *conn* [{:e/id "a" :e/version 1}
