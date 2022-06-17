@@ -5,9 +5,7 @@ A modified compare-and-swap (cas) function that handles duplicates. On-prem.
 
 ## Installation
 
-```
-com.github.ivarref/double-trouble {:git/url "https://github.com/ivarref/double-trouble.git" :git/sha "883ece009c01f8fc5e15778e57e71ef6c5f1cd17"}
-```
+[![Clojars Project](https://img.shields.io/clojars/v/com.github.ivarref/double-trouble.svg)](https://clojars.org/com.github.ivarref/double-trouble)
 
 ## 2-minute example
 
@@ -178,6 +176,13 @@ will throw an exception identical to the one thrown by `:db/cas`.
 Thus if you are already catching this kind of exception, you may keep
 using that code.
 
+If there is an older duplicate transaction, e.g. cas from version 1 to 2
+with a previously asserted and correct sha,
+but the current version now being at 3 (and not 2), `double-trouble` considers
+this an error. In this case `double-trouble` will also throw a regular `:db/cas` exception.
+This most likely means that the client/issuer of the transaction is out of sync, and
+thus you will want it to fail.
+
 If `com.github.ivarref.double-trouble/transact` detects a duplicate sha
 for a non-duplicate transaction, it will reset the atom
 `com.github.ivarref.double-trouble/healthy?` to `false`.
@@ -218,8 +223,8 @@ persistent Datomic queue for building (more) reliable systems.
 
 ## Changelog
 
-#### 2022-06-17 v0.1.
-Initial public announcement.
+#### 2022-06-17 v0.1.87
+First publicly announced release.
 
 ## License
 
