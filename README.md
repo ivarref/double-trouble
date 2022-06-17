@@ -218,7 +218,7 @@ and resiliency testing, as well as [clj-test-containers](https://github.com/java
 and/or [testcontainers-java](https://github.com/testcontainers/testcontainers-java) is worth checking out.
 
 I've also written [mikkmokk-proxy](https://github.com/ivarref/mikkmokk-proxy), an HTTP reverse proxy
-for doing fault injection on the HTTP layer, as well as [yoltq](https://github.com/ivarref/yoltq) a
+for doing fault injection on the HTTP layer, as well as [yoltq](https://github.com/ivarref/yoltq), a
 persistent Datomic queue for building (more) reliable systems.
 
 ## Changelog
