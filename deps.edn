@@ -15,7 +15,7 @@
                      :main-opts   ["-m" "cognitect.test-runner"]
                      :exec-fn     cognitect.test-runner.api/test}
 
-             :build {:deps       {com.github.liquidz/build.edn {:git/tag "0.2.63" :git/sha "f4e571d"}}
+             :build {:deps       {com.github.liquidz/build.edn {:git/tag "0.3.90" :git/sha "e3a3e31"}}
                      :ns-default build-edn.main}}
 
  :mvn/repos {"my.datomic.com" {:url "https://my.datomic.com/repo"}}}
