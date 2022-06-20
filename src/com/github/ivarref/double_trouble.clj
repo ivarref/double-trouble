@@ -94,10 +94,14 @@
 (defn duplicate-sha? [e]
   (= :sha-exists (error-code e)))
 
-(defn cas-failure? [e attr]
-  (when-let [ex-dat (ex-data (root-cause e))]
-    (and (= :db.error/cas-failed (:db/error ex-dat))
-         (= attr (:a ex-dat)))))
+(defn cas-failure?
+  ([exception]
+   (when-let [ex-dat (ex-data (root-cause exception))]
+     (= :db.error/cas-failed (:db/error ex-dat))))
+  ([exception attr]
+   (when-let [ex-dat (ex-data (root-cause exception))]
+     (and (= :db.error/cas-failed (:db/error ex-dat))
+          (= attr (:a ex-dat))))))
 
 (defn expected-val [e]
   (get (ex-data (root-cause e)) :v))

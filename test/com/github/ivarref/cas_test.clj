@@ -316,4 +316,5 @@
     (dtx [[:db/cas [:e/id "a"] :e/ref :e/enum-1 :e-enum-3]])
     (fail "Should not get here")
     (catch Exception e
-      (is (true? (dt/cas-failure? e :e/ref))))))
+      (is (true? (dt/cas-failure? e :e/ref)))
+      (is (true? (dt/cas-failure? e))))))

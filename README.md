@@ -223,6 +223,9 @@ persistent Datomic queue for building (more) reliable systems.
 
 ## Changelog
 
+#### 2022-06-20 v0.1.92
+Allow `cas-failure?` to work on a single exception and no attribute.
+
 #### 2022-06-17 v0.1.89
 First publicly announced release.
 
