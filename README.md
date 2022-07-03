@@ -192,7 +192,7 @@ You may use `:dt/sac` for this scenario. `sac` stands for `set-and-change`.
 
 When you are using `dt/transact`, `:dt/sac` will take precedence over `:dt/cas`.
 
-`:dt/sac` handles attributes the combination where attributes are references and values are keywords.
+`:dt/sac` handles the combination where attributes are references and values are keywords.
 
 
 ## Incrementing an attribute's value
