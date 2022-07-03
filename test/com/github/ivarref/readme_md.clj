@@ -13,6 +13,7 @@
 
 (def example-schema
   [#:db{:ident :e/id, :cardinality :db.cardinality/one, :valueType :db.type/string :unique :db.unique/identity}
+   #:db{:ident :e/status, :cardinality :db.cardinality/one, :valueType :db.type/keyword}
    #:db{:ident :e/version, :cardinality :db.cardinality/one, :valueType :db.type/long}
    #:db{:ident :e/info, :cardinality :db.cardinality/one, :valueType :db.type/string}])
 @(d/transact conn example-schema)
@@ -78,3 +79,17 @@
     (if (dt/cas-failure? e :e/version)
       {:status 409 :body {:message "Conflict"}}
       {:status 500 :body {:message ""}})))
+
+; dt/sac:
+@(dt/transact conn [{:e/id "sac-demo" :e/status :INIT}])
+
+(:transacted? @(dt/transact conn [[:dt/sac [:e/id "sac-demo"] :e/status :PROCESSING]]))
+
+(:transacted? @(dt/transact conn [[:dt/sac [:e/id "sac-demo"] :e/status :PROCESSING]]))
+
+; dt/jii:
+@(dt/transact conn [{:e/id "jii-demo" :e/version 1}])
+
+@(dt/transact conn [[:dt/jii [:e/id "jii-demo"] :e/version]])
+
+(d/pull (d/db conn) [:e/version] [:e/id "jii-demo"])

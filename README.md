@@ -1,13 +1,18 @@
 # <img align="right" src="the_clash.png" width="187" height="200"> [No more] double trouble
 
-Handle duplicate Datomic transactions with ease.
-A modified compare-and-swap (cas) function that handles duplicates. On-prem.
+Handle duplicate Datomic transactions with ease. This library contains:
+
+* A modified compare-and-swap function, `:dt/cas`, that gracefully handles duplicates.
+* A set-and-change function, `:dt/sac`, that cancels a transaction if a value does not change.
+* A just-increment-it function, `:dt/jii`, that increments the value of an attribute.
+
+On-prem only.
 
 ## Installation
 
 [![Clojars Project](https://img.shields.io/clojars/v/com.github.ivarref/double-trouble.svg)](https://clojars.org/com.github.ivarref/double-trouble)
 
-## 2-minute example
+## 2-minute `:dt/cas` example
 
 ```clojure
 (require '[com.github.ivarref.double-trouble :as dt])
@@ -23,6 +28,7 @@ A modified compare-and-swap (cas) function that handles duplicates. On-prem.
 
 (def example-schema
   [#:db{:ident :e/id, :cardinality :db.cardinality/one, :valueType :db.type/string :unique :db.unique/identity}
+   #:db{:ident :e/status, :cardinality :db.cardinality/one, :valueType :db.type/keyword}
    #:db{:ident :e/version, :cardinality :db.cardinality/one, :valueType :db.type/long}
    #:db{:ident :e/info, :cardinality :db.cardinality/one, :valueType :db.type/string}])
 @(d/transact conn example-schema)
@@ -168,6 +174,39 @@ You'll want to handle:
 * Cas error: response code 409.
 * Other errors: response code 500.
 
+## Using `:dt/sac` to cancel a transaction if a value does not change
+
+If your transaction is primarily concerned with changing some kind of status, you may
+want to cancel the transaction if there is no actual status change.
+You may use `:dt/sac` for this scenario. `sac` stands for `set-and-change`.
+
+```clojure
+@(dt/transact conn [{:e/id "sac-demo" :e/status :INIT}])
+
+(:transacted? @(dt/transact conn [[:dt/sac [:e/id "sac-demo"] :e/status :PROCESSING]]))
+; => true
+
+(:transacted? @(dt/transact conn [[:dt/sac [:e/id "sac-demo"] :e/status :PROCESSING]]))
+; => false
+```
+
+When you are using `dt/transact`, `:dt/sac` will take precedence over `:dt/cas`.
+
+`:dt/sac` handles attributes the combination where attributes are references and values are keywords.
+
+
+## Incrementing an attribute's value
+
+You may use `dt/jii`, where `jii` stands for `just-increment-it`:
+
+```clojure
+@(dt/transact conn [{:e/id "jii-demo" :e/version 1}])
+
+@(dt/transact conn [[:dt/jii [:e/id "jii-demo"] :e/version]])
+
+(d/pull (d/db conn) [:e/version] [:e/id "jii-demo"])
+; => #:e{:version 2}
+```
 
 ## Error handling and health checking
 
@@ -222,6 +261,9 @@ for doing fault injection on the HTTP layer, as well as [yoltq](https://github.c
 persistent Datomic queue for building (more) reliable systems.
 
 ## Changelog
+
+#### 2022-07-03 v0.1.96
+Added `:dt/sac` and `:dt/jii` functions.
 
 #### 2022-06-20 v0.1.92
 Allow `cas-failure?` to work on a single exception and no attribute.
