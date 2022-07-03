@@ -29,8 +29,7 @@
    #:db{:ident :e/status, :cardinality :db.cardinality/one, :valueType :db.type/ref}
    #:db{:ident :e/status-kw, :cardinality :db.cardinality/one, :valueType :db.type/keyword}
    #:db{:ident :Status/INIT}
-   #:db{:ident :Status/PROCESSING}
-   #:db{:ident :Status/DONE}])
+   #:db{:ident :Status/PROCESSING}])
 
 (defn with-new-conn [f]
   (let [conn (let [uri (str "datomic:mem://test-" (random-uuid))]
@@ -147,5 +146,9 @@
   (is (= :no-change (err-code @(dt/transact *conn* [[:dt/cas [:e/id "a"] :e/version 1 2 "sha"]
                                                     [:dt/sac [:e/id "a"] :e/status :Status/PROCESSING]]))))
   (is (= :no-change (err-code @(dt/transact *conn* [[:dt/sac [:e/id "a"] :e/status :Status/PROCESSING]
-                                                    [:dt/cas [:e/id "a"] :e/version 10 20 "sha"]])))))
+                                                    [:dt/cas [:e/id "a"] :e/version 10 20 "sha"]]))))
+  (let [{:keys [db-before db-after]} @(dt/transact *conn* [[:dt/sac [:e/id "a"] :e/status :Status/PROCESSING]
+                                                           [:dt/cas [:e/id "a"] :e/version 10 20 "sha"]])]
+    (is (= :Status/INIT (get-val db-before [:e/id "a"] :e/status)))
+    (is (= :Status/PROCESSING (get-val db-after [:e/id "a"] :e/status)))))
 

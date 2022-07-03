@@ -20,6 +20,14 @@
        e
        a))
 
+(defn most-recent-assert [db e a]
+  (d/q '[:find (max ?tx) .
+         :in $ ?e ?a
+         :where
+         [?e ?a _ ?tx true]]
+       (d/history db)
+       e a))
+
 (defn sac [db e-or-lookup-ref attr new-val]
   (cond
     (or (not (keyword? attr))
@@ -62,5 +70,6 @@
                    :cognitect.anomalies/message                  "No change"
                    :com.github.ivarref.double-trouble/code       :no-change
                    :com.github.ivarref.double-trouble/lookup-ref e-or-lookup-ref
-                   :com.github.ivarref.double-trouble/attr       attr})
+                   :com.github.ivarref.double-trouble/attr       attr
+                   :com.github.ivarref.double-trouble/tx         (most-recent-assert db e-or-lookup-ref attr)})
         [[:db/add e-or-lookup-ref attr new-val]]))))

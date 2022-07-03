@@ -91,6 +91,9 @@
 (defn already-transacted? [e]
   (= :already-transacted (error-code e)))
 
+(defn no-change? [e]
+  (= :no-change (error-code e)))
+
 (defn duplicate-sha? [e]
   (= :sha-exists (error-code e)))
 
@@ -146,13 +149,13 @@
   `(try
      (let [res# ~future-result]
        (assoc (select-keys res# [:db-before :db-after]) :transacted? true))
-     (catch Exception exception#
-       (if (already-transacted? exception#)
-         (return-already-transacted ~conn exception#)
-         (do
-           (when (duplicate-sha? exception#)
-             (reset! healthy? false))
-           (throw exception#))))))
+     (catch Exception e#
+       (when (duplicate-sha? e#)
+         (reset! healthy? false))
+       (if
+         (or (no-change? e#) (already-transacted? e#))
+         (return-already-transacted ~conn e#)
+         (throw e#)))))
 
 ; Borrowed from clojure.core
 (defn ^:private deref-future
