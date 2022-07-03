@@ -111,14 +111,36 @@
 
 (defn return-already-transacted [conn e]
   (let [{:com.github.ivarref.double-trouble/keys [tx]} (ex-data (root-cause e))]
-    {:transacted? false
-     :db-after    (d/as-of (d/db conn) tx)
-     :db-before   (d/as-of (d/db conn) (dec tx))}))
+    (with-meta
+      (merge (ex-data (root-cause e))
+             {:transacted? false
+              :db-after    (d/as-of (d/db conn) tx)
+              :db-before   (d/as-of (d/db conn) (dec tx))})
+      {:dt/error-map? true})))
+
+(defn order-tx [_db ftx]
+  (loop [ftx ftx
+         {:keys [other sac cas] :as m} {}]
+    (if (empty? ftx)
+      (reduce into [] [sac cas other])
+      (let [[h & rst] ftx
+            kw (cond (and (vector? h)
+                          (not-empty h)
+                          (= :dt/sac (first h)))
+                     :sac
+                     (and (vector? h)
+                          (not-empty h)
+                          (= :dt/cas (first h)))
+                     :cas
+                     :else :other)]
+        (recur rst (update m kw (fnil conj []) h))))))
+
 
 (defn expand-tx [db full-tx]
   (->> full-tx
        (resolve-tempids db)
-       (resolve-enum-refs db)))
+       (resolve-enum-refs db)
+       (order-tx db)))
 
 (defmacro handle-dt-cas [conn future-result]
   `(try

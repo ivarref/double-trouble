@@ -2,6 +2,7 @@
   (:require [clojure.test :refer [deftest is use-fixtures]]
             [clojure.tools.logging :as log]
             [com.github.ivarref.double-trouble :as dt]
+            [com.github.ivarref.double-trouble.cas :as cas]
             [com.github.ivarref.double-trouble.sac :as sac]
             [com.github.ivarref.gen-fn :as gen-fn]
             [com.github.ivarref.log-init :as log-init]
@@ -24,6 +25,7 @@
 
 (def test-schema
   [#:db{:ident :e/id, :cardinality :db.cardinality/one, :valueType :db.type/string :unique :db.unique/identity}
+   #:db{:ident :e/version, :cardinality :db.cardinality/one, :valueType :db.type/long}
    #:db{:ident :e/status, :cardinality :db.cardinality/one, :valueType :db.type/ref}
    #:db{:ident :e/status-kw, :cardinality :db.cardinality/one, :valueType :db.type/keyword}
    #:db{:ident :Status/INIT}
@@ -39,7 +41,8 @@
       (reset! dt/healthy? true)
       @(d/transact conn dt/schema)
       @(d/transact conn test-schema)
-      @(d/transact conn [(gen-fn/datomic-fn :dt/sac #'sac/sac)])
+      @(d/transact conn [(gen-fn/datomic-fn :dt/sac #'sac/sac)
+                         (gen-fn/datomic-fn :dt/cas #'cas/cas)])
       (reset! c conn)
       (binding [*conn* conn]
         (f))
@@ -55,11 +58,17 @@
 
 (defmacro err-code [& body]
   `(try
-     (do ~@body)
-     (log/error "No error message")
-     nil
+     (let [res# (do ~@body)]
+       (if (true? (some->> res# meta :dt/error-map?))
+         (:com.github.ivarref.double-trouble/code res#)
+         (do
+           (log/error "No error message")
+           (is (= 1 2 "No error code"))
+           nil)))
      (catch Exception e#
-       (:com.github.ivarref.double-trouble/code (ex-data (root-cause e#))))))
+       (let [ex-data# (ex-data (root-cause e#))]
+         (or (:com.github.ivarref.double-trouble/code ex-data#)
+             (:db/error ex-data#))))))
 
 (defn is-ref? [db attr]
   (= :db.type/ref
@@ -123,3 +132,20 @@
   @(d/transact *conn* [{:e/id "a" :e/status-kw :Status/INIT}])
   @(d/transact *conn* [[:dt/sac [:e/id "a"] :e/status-kw :Status/PROCESSING]])
   (is (= :Status/PROCESSING (get-val (db) [:e/id "a"] :e/status-kw))))
+
+(deftest cas-sac-ordering
+  @(d/transact *conn* [{:e/id "a" :e/version 1 :e/status :Status/INIT}])
+  (is (= :no-change (err-code @(dt/transact *conn* [[:dt/cas [:e/id "a"] :e/version 1 2 "sha"]
+                                                    [:dt/sac [:e/id "a"] :e/status :Status/INIT]]))))
+
+  @(dt/transact *conn* [[:dt/cas [:e/id "a"] :e/version 1 2 "sha"]
+                        [:dt/sac [:e/id "a"] :e/status :Status/PROCESSING]])
+
+  (is (= :no-change (err-code @(dt/transact *conn* [[:dt/cas [:e/id "a"] :e/version 10 20 "sha"]
+                                                    [:dt/sac [:e/id "a"] :e/status :Status/PROCESSING]]))))
+
+  (is (= :no-change (err-code @(dt/transact *conn* [[:dt/cas [:e/id "a"] :e/version 1 2 "sha"]
+                                                    [:dt/sac [:e/id "a"] :e/status :Status/PROCESSING]]))))
+  (is (= :no-change (err-code @(dt/transact *conn* [[:dt/sac [:e/id "a"] :e/status :Status/PROCESSING]
+                                                    [:dt/cas [:e/id "a"] :e/version 10 20 "sha"]])))))
+
