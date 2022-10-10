@@ -169,4 +169,8 @@
       (is (= :no-change (err-code tx-res)))
       (is (false? (:transacted? tx-res))))))
 
-
+(deftest db-cas-lookup-ref
+  "Verify that db/cas handles lookup refs"
+  @(d/transact *conn* [{:db/id "a" :e/id "a" :e/version 1 :e/sha "begin"}])
+  @(d/transact *conn* [[:db/cas [:e/id "a"] :e/version 1 2]])
+  (is (= 2 (:e/version (d/pull (d/db *conn*) [:*] [:e/id "a"])))))
