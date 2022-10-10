@@ -26,6 +26,8 @@
 (def test-schema
   [#:db{:ident :e/id, :cardinality :db.cardinality/one, :valueType :db.type/string :unique :db.unique/identity}
    #:db{:ident :e/version, :cardinality :db.cardinality/one, :valueType :db.type/long}
+   #:db{:ident :e/info, :cardinality :db.cardinality/one, :valueType :db.type/string}
+   #:db{:ident :e/sha, :cardinality :db.cardinality/one, :valueType :db.type/string :index true}
    #:db{:ident :e/status, :cardinality :db.cardinality/one, :valueType :db.type/ref}
    #:db{:ident :e/status-kw, :cardinality :db.cardinality/one, :valueType :db.type/keyword}
    #:db{:ident :Status/INIT}
@@ -147,8 +149,24 @@
                                                     [:dt/sac [:e/id "a"] :e/status :Status/PROCESSING]]))))
   (is (= :no-change (err-code @(dt/transact *conn* [[:dt/sac [:e/id "a"] :e/status :Status/PROCESSING]
                                                     [:dt/cas [:e/id "a"] :e/version 10 20 "sha"]]))))
-  (let [{:keys [db-before db-after]} @(dt/transact *conn* [[:dt/sac [:e/id "a"] :e/status :Status/PROCESSING]
-                                                           [:dt/cas [:e/id "a"] :e/version 10 20 "sha"]])]
+  (let [{:keys [db-before db-after transacted?]} @(dt/transact *conn* [[:dt/sac [:e/id "a"] :e/status :Status/PROCESSING]
+                                                                       [:dt/cas [:e/id "a"] :e/version 10 20 "sha"]])]
+    (is (false? transacted?))
     (is (= :Status/INIT (get-val db-before [:e/id "a"] :e/status)))
     (is (= :Status/PROCESSING (get-val db-after [:e/id "a"] :e/status)))))
+
+(deftest db-cas-sac-error-ordering
+  "dt/sac have higher priority, i.e. 'wins' the error message, over db/cas, regardless of ordering"
+  (let [{:strs [a]} (:tempids @(d/transact *conn* [{:db/id "a" :e/id "a" :e/version 1 :e/sha "begin"}]))]
+    @(dt/transact *conn* [{:e/id "a" :e/version 2}
+                          [:dt/sac [:e/id "a"] :e/sha "original"]])
+    (let [tx-res @(dt/transact *conn* [[:dt/sac [:e/id "a"] :e/sha "original"]
+                                       [:db/cas a :e/version 100 3]])]
+      (is (= :no-change (err-code tx-res)))
+      (is (false? (:transacted? tx-res))))
+    (let [tx-res @(dt/transact *conn* [[:db/cas a :e/version 100 3]
+                                       [:dt/sac [:e/id "a"] :e/sha "original"]])]
+      (is (= :no-change (err-code tx-res)))
+      (is (false? (:transacted? tx-res))))))
+
 
