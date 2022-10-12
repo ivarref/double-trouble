@@ -6,6 +6,7 @@ Handle duplicate Datomic transactions with ease. This library contains:
 * A set-and-change function, `:dt/sac`, that cancels a transaction if a value does not change.
 * A just-increment-it function, `:dt/jii`, that increments the value of an attribute.
 * A counter function, `:dt/counter` that returns increasing numbers starting from 1 for a given counter name.
+* A counter function, `:dt/counter-str` that returns increasing numbers starting from 1 for a given counter name as a string.
 
 On-prem only.
 
@@ -230,6 +231,8 @@ You may use `:dt/counter`:
 
 Notice here that it is `datomic.api/transact` that is being used.
 
+Use `:dt/counter-str` if the added attribute should be a string.
+
 ## Error handling and health checking
 
 If there is a regular cas mismatch and thus an actual conflict, `:dt/cas`
@@ -283,6 +286,9 @@ for doing fault injection on the HTTP layer, as well as [yoltq](https://github.c
 persistent Datomic queue for building (more) reliable systems.
 
 ## Changelog
+
+#### 2022-10-12 v0.1.101
+Added `:dt/counter-str` function.
 
 #### 2022-10-12 v0.1.100
 Added `:dt/counter` function.
