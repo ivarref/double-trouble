@@ -5,6 +5,7 @@ Handle duplicate Datomic transactions with ease. This library contains:
 * A modified compare-and-swap function, `:dt/cas`, that gracefully handles duplicates.
 * A set-and-change function, `:dt/sac`, that cancels a transaction if a value does not change.
 * A just-increment-it function, `:dt/jii`, that increments the value of an attribute.
+* A counter function, `:dt/counter` that returns increasing numbers starting from 1 for a given counter name.
 
 On-prem only.
 
@@ -208,6 +209,27 @@ You may use `dt/jii`, where `jii` stands for `just-increment-it`:
 ; => #:e{:version 2}
 ```
 
+## Counters
+
+You may use `:dt/counter`:
+
+```clojure
+(let [tx [[:dt/counter "my-counter" "my-tempid" :e/id-long]
+          {:db/id "my-tempid" :e/info "info"}]
+      {:keys [db-after tempids]} @(d/transact conn tx)]
+  (d/pull db-after [:*] (get tempids "my-tempid")))
+; => {:db/id ... :e/id-long 1 :e/info "info"}
+
+; evaluate the same again, and you will get e.g.:
+(let [tx [[:dt/counter "my-counter" "my-tempid" :e/id-long]
+          {:db/id "my-tempid" :e/info "info"}]
+      {:keys [db-after tempids]} @(d/transact conn tx)]
+  (d/pull db-after [:*] (get tempids "my-tempid")))
+; => {:db/id ... :e/id-long 2 :e/info "info"}
+```
+
+Notice here that it is `datomic.api/transact` that is being used.
+
 ## Error handling and health checking
 
 If there is a regular cas mismatch and thus an actual conflict, `:dt/cas`
@@ -261,6 +283,9 @@ for doing fault injection on the HTTP layer, as well as [yoltq](https://github.c
 persistent Datomic queue for building (more) reliable systems.
 
 ## Changelog
+
+#### 2022-10-12 v0.1.100
+Added `:dt/counter` function.
 
 #### 2022-07-03 v0.1.96
 Added `:dt/sac` and `:dt/jii` functions.

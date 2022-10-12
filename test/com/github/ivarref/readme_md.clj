@@ -13,6 +13,7 @@
 
 (def example-schema
   [#:db{:ident :e/id, :cardinality :db.cardinality/one, :valueType :db.type/string :unique :db.unique/identity}
+   #:db{:ident :e/id-long, :cardinality :db.cardinality/one, :valueType :db.type/long :unique :db.unique/identity}
    #:db{:ident :e/status, :cardinality :db.cardinality/one, :valueType :db.type/keyword}
    #:db{:ident :e/version, :cardinality :db.cardinality/one, :valueType :db.type/long}
    #:db{:ident :e/info, :cardinality :db.cardinality/one, :valueType :db.type/string}])
@@ -93,3 +94,8 @@
 @(dt/transact conn [[:dt/jii [:e/id "jii-demo"] :e/version]])
 
 (d/pull (d/db conn) [:e/version] [:e/id "jii-demo"])
+
+(let [tx [[:dt/counter "kebbelife" "my-tempid" :e/id-long]
+          {:db/id "my-tempid" :e/info "info"}]
+      {:keys [db-after tempids]} @(d/transact conn tx)]
+  (d/pull db-after [:*] (get tempids "my-tempid")))

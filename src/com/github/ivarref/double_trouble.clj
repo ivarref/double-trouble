@@ -11,7 +11,9 @@
 
 (def schema
   (into
-    [#:db{:ident :com.github.ivarref.double-trouble/sha-1 :cardinality :db.cardinality/one :valueType :db.type/string :unique :db.unique/value}]
+    [#:db{:ident :com.github.ivarref.double-trouble/sha-1 :cardinality :db.cardinality/one :valueType :db.type/string :unique :db.unique/value}
+     #:db{:ident :com.github.ivarref.double-trouble/counter-name :cardinality :db.cardinality/one :valueType :db.type/string :unique :db.unique/identity}
+     #:db{:ident :com.github.ivarref.double-trouble/counter-value :cardinality :db.cardinality/one :valueType :db.type/long}]
     gen/schema))
 
 (defn sha [m]
