@@ -287,6 +287,9 @@ persistent Datomic queue for building (more) reliable systems.
 
 ## Changelog
 
+#### 2022-11-18 v0.1.102
+Added `ensure-partition!` function.
+
 #### 2022-10-12 v0.1.101
 Added `:dt/counter-str` function.
 

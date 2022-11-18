@@ -189,3 +189,20 @@
       (isCancelled [_] (.isCancelled fut))
       (isDone [_] (.isDone fut))
       (cancel [_ interrupt?] (.cancel fut interrupt?)))))
+
+(defn ensure-partition!
+  "Ensures that `new-partition` is installed in the database."
+  [conn new-partition]
+  (assert (keyword? new-partition))
+  (let [db (d/db conn)]
+    (if-let [eid (d/q '[:find ?e .
+                        :in $ ?part
+                        :where
+                        [?e :db/ident ?part]]
+                      db
+                      new-partition)]
+      eid
+      (get-in
+        @(d/transact conn [{:db/id "new-part" :db/ident new-partition}
+                           [:db/add :db.part/db :db.install/partition "new-part"]])
+        [:tempids "new-part"]))))
