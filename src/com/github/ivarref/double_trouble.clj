@@ -4,7 +4,8 @@
             [com.github.ivarref.double-trouble.sha :as sha]
             [datomic.api :as d])
   (:import (clojure.lang IBlockingDeref IDeref IPending)
-           (datomic Connection)
+           (datomic Connection Database Datom)
+           (java.util ArrayList)
            (java.util.concurrent Future TimeUnit TimeoutException)))
 
 (defonce healthy? (atom true))
@@ -206,3 +207,30 @@
         @(d/transact conn [{:db/id "new-part" :db/ident new-partition}
                            [:db/add :db.part/db :db.install/partition "new-part"]])
         [:tempids "new-part"]))))
+
+(defn resolve-lookup-refs [{:keys [tx-data db-after]} attr]
+  (assert (keyword? attr) "Expected attr to be a keyword")
+  (assert (or (instance? ArrayList tx-data) (vector? tx-data)) (str "Expected tx-data to be a vector. Was: " (type tx-data)))
+  (assert (instance? Database db-after) "Expected db-after to be a datomic.Database")
+  (let [res (reduce (fn [o datom]
+                      (assert (instance? Datom datom) "Expected v to be a datomic.Datom")
+                      (if (= (d/entid db-after attr) (d/entid db-after (.a datom)))
+                        (conj o [attr (.v datom)])
+                        o))
+                    #{}
+                    (into [] tx-data))]
+    (if (empty? res)
+      (throw (ex-info (str "Did not find attribute " attr " in transaction") {:tx-data tx-data :attr attr}))
+      res)))
+
+(defn resolve-lookup-ref [tx-result attr]
+  (let [res (resolve-lookup-refs tx-result attr)]
+    (cond
+      (> (count res) 1)
+      (throw (ex-info "More than a single match" {:attr attr :found res}))
+
+      (= 1 (count res))
+      (first res)
+
+      :else
+      nil)))

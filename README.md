@@ -287,6 +287,9 @@ persistent Datomic queue for building (more) reliable systems.
 
 ## Changelog
 
+#### 2022-11-21 v0.1.103
+Support tempids in counter functions.
+
 #### 2022-11-18 v0.1.102
 Added `ensure-partition!` function.
 

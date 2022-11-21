@@ -3,6 +3,7 @@
     [clojure.test :as test :refer [deftest is]]
     [com.github.ivarref.double-trouble :as dt]
     [com.github.ivarref.double-trouble.counter :as counter]
+    [com.github.ivarref.double-trouble.counter-str :as counter-str]
     [com.github.ivarref.gen-fn :as gen-fn]
     [com.github.ivarref.log-init :as log-init]
     [datomic.api :as d]))
@@ -35,6 +36,7 @@
     @(d/transact conn dt/schema)
     @(d/transact conn test-schema)
     @(d/transact conn [(gen-fn/datomic-fn :dt/counter #'counter/counter)])
+    @(d/transact conn [(gen-fn/datomic-fn :dt/counter-str #'counter-str/counter-str)])
     (binding [*conn* conn]
       (f))))
 
@@ -61,3 +63,31 @@
         {:strs [a]} (:tempids @(d/transact *conn* tx))
         res (select-keys (d/pull (d/db *conn*) [:*] a) [:e/id-long :e/info])]
     (is (= #:e{:id-long 3 :info "janei4"} res))))
+
+(deftest counter-tempid-test
+  (dt/ensure-partition! *conn* :counters)
+  (let [tmpid (d/tempid :counters)
+        tx [[:dt/counter "some-counter" tmpid :e/id-long]
+            {:db/id tmpid :e/info "janei"}]
+        {:keys [db-after] :as tx-result} @(d/transact *conn* tx)]
+    (is (= [:e/id-long 1] (dt/resolve-lookup-ref tx-result :e/id-long)))
+    (is (= #:e{:id-long 1 :info "janei"} (d/pull db-after [:e/id-long :e/info] (dt/resolve-lookup-ref tx-result :e/id-long)))))
+  (let [tmpid (d/tempid :counters)
+        tx [[:dt/counter "some-counter" tmpid :e/id-long]
+            {:db/id tmpid :e/info "janei2"}]
+        {:keys [db-after] :as tx-result} @(d/transact *conn* tx)]
+    (is (= #:e{:id-long 2 :info "janei2"} (d/pull db-after [:e/id-long :e/info] (dt/resolve-lookup-ref tx-result :e/id-long))))))
+
+(deftest counter-str-tempid-test
+  (dt/ensure-partition! *conn* :counters)
+  (let [tmpid (d/tempid :counters)
+        tx [[:dt/counter-str "some-counter" tmpid :e/id]
+            {:db/id tmpid :e/info "janei"}]
+        {:keys [db-after] :as tx-result} @(d/transact *conn* tx)]
+    (is (= [:e/id "1"] (dt/resolve-lookup-ref tx-result :e/id)))
+    (is (= #:e{:id "1" :info "janei"} (d/pull db-after [:e/id :e/info] (dt/resolve-lookup-ref tx-result :e/id)))))
+  (let [tmpid (d/tempid :counters)
+        tx [[:dt/counter-str "some-counter" tmpid :e/id]
+            {:db/id tmpid :e/info "janei2"}]
+        {:keys [db-after] :as tx-result} @(d/transact *conn* tx)]
+    (is (= #:e{:id "2" :info "janei2"} (d/pull db-after [:e/id :e/info] (dt/resolve-lookup-ref tx-result :e/id))))))
