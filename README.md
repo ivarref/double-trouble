@@ -287,6 +287,9 @@ persistent Datomic queue for building (more) reliable systems.
 
 ## Changelog
 
+#### 2022-12-16 v0.1.105
+Bugfix `resolve-lookup-ref` for remote transactor.
+
 #### 2022-11-21 v0.1.103
 Support tempids in counter functions.
 
