@@ -6,6 +6,7 @@
     [com.github.ivarref.double-trouble.counter-str :as counter-str]
     [com.github.ivarref.gen-fn :as gen-fn]
     [com.github.ivarref.log-init :as log-init]
+    [com.github.sikt-no.datomic-testcontainers :as dtc]
     [datomic.api :as d]))
 
 (require '[com.github.ivarref.debug])
@@ -28,16 +29,22 @@
    #:db{:ident :Status/PROCESSING}])
 
 (defn with-new-conn [f]
-  (let [conn (let [uri (str "datomic:mem://test-" (random-uuid))]
-               (d/delete-database uri)
-               (d/create-database uri)
-               (d/connect uri))]
+  (let [in-mem-conn (let [uri (str "datomic:mem://test-" (random-uuid))]
+                      (d/delete-database uri)
+                      (d/create-database uri)
+                      (d/connect uri))
+        remote-conn (dtc/get-conn {:delete? true})
+        tx! (fn [tx-data]
+              @(d/transact in-mem-conn tx-data)
+              @(d/transact remote-conn tx-data))]
     (reset! dt/healthy? true)
-    @(d/transact conn dt/schema)
-    @(d/transact conn test-schema)
-    @(d/transact conn [(gen-fn/datomic-fn :dt/counter #'counter/counter)])
-    @(d/transact conn [(gen-fn/datomic-fn :dt/counter-str #'counter-str/counter-str)])
-    (binding [*conn* conn]
+    (tx! dt/schema)
+    (tx! test-schema)
+    (tx! [(gen-fn/datomic-fn :dt/counter #'counter/counter)])
+    (tx! [(gen-fn/datomic-fn :dt/counter-str #'counter-str/counter-str)])
+    (binding [*conn* in-mem-conn]
+      (f))
+    (binding [*conn* remote-conn]
       (f))))
 
 (test/use-fixtures :each with-new-conn)

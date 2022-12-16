@@ -5,7 +5,7 @@
             [datomic.api :as d])
   (:import (clojure.lang IBlockingDeref IDeref IPending)
            (datomic Connection Database Datom)
-           (java.util ArrayList)
+           (java.util List)
            (java.util.concurrent Future TimeUnit TimeoutException)))
 
 (defonce healthy? (atom true))
@@ -210,7 +210,7 @@
 
 (defn resolve-lookup-refs [{:keys [tx-data db-after]} attr]
   (assert (keyword? attr) "Expected attr to be a keyword")
-  (assert (or (instance? ArrayList tx-data) (vector? tx-data)) (str "Expected tx-data to be a vector. Was: " (type tx-data)))
+  (assert (or (instance? List tx-data) (vector? tx-data)) (str "Expected tx-data to be a vector. Was: " (type tx-data)))
   (assert (instance? Database db-after) "Expected db-after to be a datomic.Database")
   (let [res (reduce (fn [o datom]
                       (assert (instance? Datom datom) "Expected v to be a datomic.Datom")
